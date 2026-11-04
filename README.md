@@ -1,10 +1,16 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/lh_banner_dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/lh_banner_light.png">
-    <img src="docs/assets/lh_banner_light.png" alt="LearnHarness" width="640">
-  </picture>
-</p>
+<p align="center"><strong>Connla</strong></p>
+
+<p align="center">A teacher with a memory.</p>
+
+<p align="center">A fork of <a href="https://github.com/amosblomqvist/learnharness">LearnHarness</a>, dressed as the third Mimir.</p>
+
+---
+
+**What this fork changes.** The engine is LearnHarness, unmodified: same agents, same session and practice machinery, same knowledge graph, same desktop shell. What changed is the skin. Warm paper and sage ink; a serif for text you read and a monospace for furniture; hard offset shadows where upstream had blur; one startup plate of the Salmon of Knowledge at Connla's Well. The brand reads Connla everywhere a learner can see it. The package name and bundle id stay `learnharness`, so upstream merges and update identity keep working.
+
+The plate is a 1904 public-domain illustration of the well, dithered to ink with the `plate` tool from `unwalled-garden` (`--ink bone --screen stipple --cell 2 --grain 0.60`). Files in `public/intro/`.
+
+---
 
 <p align="center"><strong>An agent harness for learning.</strong></p>
 

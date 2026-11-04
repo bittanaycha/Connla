@@ -768,7 +768,7 @@ test("spawns with the model alias, effort, bridge tools, MCP timeout headroom an
 	assert.equal(call.env.CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT, "1800000");
 	assert.equal(LIVE_PROCESS_IDLE_TIMEOUT_MS, 600000, "learner-wait retention stays at ten minutes");
 	for (const name of ["MCP_TOOL_TIMEOUT", "CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT"]) {
-		assert.ok(Number(call.env[name]) > LIVE_PROCESS_IDLE_TIMEOUT_MS, `${name} must outlast LearnHarness retention`);
+		assert.ok(Number(call.env[name]) > LIVE_PROCESS_IDLE_TIMEOUT_MS, `${name} must outlast Connla retention`);
 	}
 	assert.equal(call.env.HOME, process.env.HOME);
 	assert.equal(call.env.CLAUDE_CONFIG_DIR, process.env.CLAUDE_CONFIG_DIR);
@@ -843,7 +843,7 @@ test("preserves existing CLI environment authentication without a subscription g
 	assert.equal(getFlagValue(call.args, "--setting-sources"), "user");
 });
 
-test("does not inject credentials reflected only from LearnHarness's key store", async (t) => {
+test("does not inject credentials reflected only from Connla's key store", async (t) => {
 	const name = "ANTHROPIC_API_KEY";
 	const record = authEnvRecord();
 	const saved = process.env[name];
@@ -856,7 +856,7 @@ test("does not inject credentials reflected only from LearnHarness's key store",
 	const { calls } = await runScenario(t, readFixtureLines("text.jsonl"));
 	assert.equal(getOnlyCall(calls).env[name], undefined);
 	assert.equal(getOnlyCall(calls).env.CLAUDE_CODE_DISABLE_CLAUDE_MDS, "1", "instruction isolation does not bypass auth provenance");
-	assert.equal(process.env[name], "lh-only-key", "other LearnHarness providers keep their env reflection");
+	assert.equal(process.env[name], "lh-only-key", "other Connla providers keep their env reflection");
 });
 
 test("writes one user prompt after local-only control initialization and summary request", async (t) => {

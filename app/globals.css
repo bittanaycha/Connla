@@ -3,16 +3,23 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * THE SKIN — wave 5. Design tokens, the single place to restyle the app.
+ * THE SKIN — Connla. Warm paper, sage and serif.
  *
- * Mathematical soundness, per the owner's brief:
- *   - Tailwind's built-in 0.25rem (4px) spacing scale IS the rhythm — every
- *     padding/margin/gap in the app uses whole units of a 4px base.
- *   - The type scale below is a declared modular ladder (each --text-* token
- *     carries its own line-height); components never invent pixel sizes.
- *   - Radii ladder is 4 / 8 / 12 / 16px multiples of the 4px base.
- *   - Emphasis colors live in tokens (--lh-ink-strong / --lh-ink-italic) so a
- *     future settings UI reassigns them (configurable per the owner).
+ * The palette is Mimir's, carried over whole: unbleached paper, an ink that is
+ * brown-black rather than neutral, one sage accent, and a single red that means
+ * "this cannot be undone". Surfaces are the next shade of the same stock with a
+ * hard offset shadow, not a lighter rectangle with a soft blur. Corners are
+ * nearly square because a printed sheet has corners.
+ *
+ * Type keeps Mimir's division of labour: a serif for what is read (teaching
+ * prose, session titles) and a monospace for furniture (labels, controls,
+ * status). The reading size and its ladder are unchanged; only the voices are.
+ *
+ * Everything below is expressed as tokens, so the app is reskinned here and
+ * nowhere else. The ladder is still whole 4px units:
+ *   - Tailwind's spacing scale,
+ *   - the modular --text-* ladder (each size carries its line-height),
+ *   - radii 2 / 3 / 4 / 5 px — the printed corner, not a pill.
  */
 
 /* The no-ring law (owner, UI round 2026-10-01): the browser's default
@@ -27,79 +34,121 @@
 	outline: none;
 }
 
-/* Palette (owner's hexes): main #141414, raised #1C1C1C, edges #434343.
-   Mono chrome = JetBrains Mono; prose = Source Sans 3; titles = CMU Serif. */
+/* Palette — Mimir's stock, spoken in shadcn's token names. The names are the
+   old app's; the values are the vault's. Nothing here is neutral grey: the ink
+   carries a little brown and the paper carries a little cream, so the window
+   reads as a printed sheet rather than a screen with the brightness down. */
 :root {
-	color-scheme: dark;
-	--radius: 8px;
-	--background: #141414;
-	--foreground: #e6e6e6;
-	--card: #1c1c1c;
-	--card-foreground: #e6e6e6;
-	--popover: #1c1c1c;
-	--popover-foreground: #e6e6e6;
-	--primary: #e6e6e6;
-	--primary-foreground: #141414;
-	--secondary: #1c1c1c;
-	--secondary-foreground: #e6e6e6;
-	--muted: #1c1c1c;
-	--muted-foreground: #8d8d8d;
-	--accent: #2a2a2a;
-	--accent-foreground: #e6e6e6;
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: #434343;
-	--input: #434343;
-	--ring: #8d8d8d;
+	color-scheme: light;
+	--radius: 3px;
+	--paper: #faf6ea;
+	--paper-2: #f2ead6;
+	--paper-3: #e9dfc6;
+	--background: var(--paper);
+	--foreground: #25231d;
+	--card: var(--paper-2);
+	--card-foreground: #25231d;
+	--popover: #fbf8ef;
+	--popover-foreground: #25231d;
+	--primary: #4f7a5c;
+	--primary-foreground: #faf6ea;
+	--secondary: var(--paper-2);
+	--secondary-foreground: #25231d;
+	--muted: var(--paper-2);
+	--muted-foreground: #665e4c;
+	--accent: var(--paper-3);
+	--accent-foreground: #25231d;
+	--destructive: #b3261e;
+	--border: #e3d9c1;
+	--input: #c9bc9e;
+	--ring: #4f7a5c;
+	/* The four voices, kept nameable so a surface can reach for the right one
+	   instead of borrowing the accent: mint is the teacher, peach the learner,
+	   lilac the working (quotes, earlier turns), cyan the vault's furniture. */
+	--voice-mint: #2f7d63;
+	--voice-peach: #b5642f;
+	--voice-lilac: #6b5aa8;
+	--voice-cyan: #2c6b7a;
+	--mark: #4f7a5c;
+	--mark-soft: #dbe8d4;
+	/* The one shadow: a hard offset, like a sheet laid on a sheet. */
+	--sheet-shadow: rgb(58 45 28 / 14%);
+	/* The scrim behind a modal. A 20% ink wash reads as "the page stepped
+	   back" on paper; the night ground needs deep black or the dimmed page
+	   comes forward instead of receding. */
+	--scrim: rgb(37 35 29 / 20%);
+	/* Semantic ramps, per mode (aliased to the Tailwind colour names below,
+	   so the answer cards follow the mode without a single class change). */
+	--ramp-green-500: #3f6f4f;
+	--ramp-green-600: #355d43;
+	--ramp-red-300: #c98a83;
+	--ramp-red-400: #b5534a;
+	--ramp-red-500: #a8382f;
+	--ramp-red-600: #8e2f27;
+	--ramp-amber-500: #96631f;
 	/* Emphasis inks default to the REGULAR TEXT COLOR (owner ruling,
-	   appearance wave 2026-09-26 — the old #ee928c/#6fa9d6 factory
-	   emphasis colors are gone). Explicit overrides land via the
+	   appearance wave 2026-09-26). Explicit overrides land via the
 	   appearance settings vars. */
 	--lh-ink-strong: var(--foreground);
 	--lh-ink-italic: var(--foreground);
-	/* THE READING SIZE = the ladder's 16px rung (--text-lg). Can't be
-	   var()-linked: @theme inline inlines literals into utilities without
-	   emitting runtime vars — so this is the one documented duplication:
-	   change one, change both. (owner, typography round 4: snapped from
-	   the reskin's hand-tuned 16.5 to the ladder's 16.) */
-	--lh-prose-size: 16px;
-	--lh-prose-leading: 1.5;
-	/* Markdown heading weight (appearance settings; 900 = the Black cut). */
-	--lh-heading-weight: 900;
+	/* THE READING SIZE: the ladder's 16px rung, opened to Mimir's 16.5 —
+	   a serif sets smaller than a sans at the same size. */
+	--lh-prose-size: 16.5px;
+	--lh-prose-leading: 1.55;
+	/* Markdown heading weight (appearance settings; the serif's bold). */
+	--lh-heading-weight: 700;
 }
 
-/* The app is always dark (<html class="dark">); mirror the same values so
-   the block stays coherent under Tailwind's variant. */
+/* THE SAME SHEET AT NIGHT: the paper's own hue inverted, not a second
+   palette. The stock darkens to a warm brown-black (the paper's 45° hue
+   carried down), the ink lightens to the paper's cream, and every accent
+   is its daytime colour lifted until it clears 4.5:1 on the dark stock.
+   Sage stays sage; only its weight shifts. */
 .dark {
-	--background: #141414;
-	--foreground: #e6e6e6;
-	--card: #1c1c1c;
-	--card-foreground: #e6e6e6;
-	--popover: #1c1c1c;
-	--popover-foreground: #e6e6e6;
-	--primary: #e6e6e6;
-	--primary-foreground: #141414;
-	--secondary: #1c1c1c;
-	--secondary-foreground: #e6e6e6;
-	--muted: #1c1c1c;
-	--muted-foreground: #8d8d8d;
-	--accent: #2a2a2a;
-	--accent-foreground: #e6e6e6;
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: #434343;
-	--input: #434343;
-	--ring: #8d8d8d;
-	/* Same emphasis ruling as the block above: unset = text color. */
+	color-scheme: dark;
+	--paper: #18140d;
+	--paper-2: #1f1a12;
+	--paper-3: #272118;
+	--background: var(--paper);
+	--foreground: #f2ecdc;
+	--card: var(--paper-2);
+	--card-foreground: #f2ecdc;
+	--popover: #1f1a12;
+	--popover-foreground: #f2ecdc;
+	--primary: #93c4a0;
+	--primary-foreground: #14110b;
+	--secondary: var(--paper-2);
+	--secondary-foreground: #f2ecdc;
+	--muted: #272118;
+	--muted-foreground: #b6ab95;
+	--accent: #2d2619;
+	--accent-foreground: #f2ecdc;
+	--destructive: #e09183;
+	--border: #372f23;
+	--input: #4a3f30;
+	--ring: #93c4a0;
+	--voice-mint: #93cfae;
+	--voice-peach: #e9a877;
+	--voice-lilac: #bdb0e8;
+	--voice-cyan: #93ccd4;
+	--mark: #93c4a0;
+	--mark-soft: #26342a;
+	--sheet-shadow: rgb(0 0 0 / 50%);
+	--scrim: rgb(0 0 0 / 60%);
+	/* The same four answers, lit for the night stock: the paper inks fall
+	   under 3:1 on #18140d, so each ramp brightens to its pastel. */
+	--ramp-green-500: #93c4a0;
+	--ramp-green-600: #a8d3b3;
+	--ramp-red-300: #f0b1a6;
+	--ramp-red-400: #e59a8d;
+	--ramp-red-500: #e09183;
+	--ramp-red-600: #eb9f92;
+	--ramp-amber-500: #dcb273;
 	--lh-ink-strong: var(--foreground);
 	--lh-ink-italic: var(--foreground);
-	/* THE READING SIZE = the ladder's 16px rung (--text-lg). Can't be
-	   var()-linked: @theme inline inlines literals into utilities without
-	   emitting runtime vars — so this is the one documented duplication:
-	   change one, change both. (owner, typography round 4: snapped from
-	   the reskin's hand-tuned 16.5 to the ladder's 16.) */
-	--lh-prose-size: 16px;
-	--lh-prose-leading: 1.5;
-	/* Markdown heading weight (appearance settings; 900 = the Black cut). */
-	--lh-heading-weight: 900;
+	--lh-prose-size: 16.5px;
+	--lh-prose-leading: 1.55;
+	--lh-heading-weight: 700;
 }
 
 /* CMU Serif bold (titles) — bundled local file, no CDN dependency. */
@@ -112,29 +161,25 @@
 }
 
 @theme inline {
-	/* Fonts: chrome = JetBrains Mono, prose = Source Sans 3, titles = CMU
-	   Serif bold. The JetBrains/SourceSans variables attach in app/layout.tsx.
-	   (owner, typography round) The Tailwind defaults are ALIASED to the app
-	   fonts: `font-mono`/`font-sans` utilities would otherwise fall to the
-	   SYSTEM stacks — a fourth font the app never chose — and streamdown's
-	   code-block chrome + mermaid-error + demo-card all use them. */
+	/* Type: a serif for what is read, a monospace for furniture (Mimir's
+	   division of labour). JetBrains Mono is self-hosted through next/font in
+	   app/layout.tsx — it is the app's furniture voice; the serif is the macOS
+	   book face with Palatino, Charter and Georgia behind it, so the window
+	   keeps its voice on a machine without Iowan. The Tailwind defaults are
+	   aliased so streamdown's chrome (code blocks, mermaid, demo cards) uses
+	   the same two faces rather than falling back to a third. */
 	--font-ui: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
-	--font-prose: var(--font-sans3), ui-sans-serif, system-ui, sans-serif;
+	--font-prose: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Charter, Georgia, "Times New Roman", serif;
 	--font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
-	--font-sans: var(--font-sans3), ui-sans-serif, system-ui, sans-serif;
+	--font-sans: var(--font-prose);
 	/* The modular type ladder — each size carries its own line-height.
-	   Component sizes must pull from this ladder. (owner, typography
-	   round 4: the 10px rung is merged into 11 — one pixel apart was a
-	   distinction with no visible difference, and 10px sits at the mono
-	   legibility floor; quiet labels get their quiet from color +
-	   tracking, not a notch of size. Reading prose = the 16px rung via
-	   --lh-prose-size.) */
+	   Component sizes must pull from this ladder. Reading prose = the
+	   16.5px rung via --lh-prose-size. */
 	/* --font-title lives in the NON-inline @theme below: inline tokens get
-	   their literal values baked into the utilities (.font-title{font-family:
-	   lh-cmu,serif}), which made the appearance "session names in serif"
-	   toggle write a runtime --font-title no consumer ever read (owner, fix
-	   wave: toggle looked dead). Non-inline emits :root { --font-title: … }
-	   and the utility reads var(--font-title) — appearance overrides win. */
+	   their literal values baked into the utilities, which made the
+	   appearance "session names in serif" toggle write a runtime
+	   --font-title no consumer ever read. Non-inline emits
+	   :root { --font-title: … } and the utility reads var(--font-title). */
 	--text-xs: 11px;
 	--text-xs--line-height: 1.4;
 	--text-sm: 12.5px;
@@ -149,12 +194,21 @@
 	--text-2xl--line-height: 1.3;
 	--text-3xl: 32px;
 	--text-3xl--line-height: 1.25;
-	/* Radii ladder — 4/8/12/16 multiples of the 4px base. */
-	--radius-sm: 4px;
-	--radius-md: 8px;
-	--radius-lg: 12px;
-	--radius-xl: 16px;
-	--radius: 8px;
+	/* Radii — the printed corner: a hair off square, never a pill. Circles
+	   (rounded-full) keep their own geometry and are not touched. */
+	--radius-sm: 2px;
+	--radius-md: 3px;
+	--radius-lg: 4px;
+	--radius-xl: 5px;
+	--radius-2xl: 6px;
+	--radius: 3px;
+	/* Shadows — a sheet laid on a sheet: hard offset, no blur. */
+	--shadow-2xs: 1px 1px 0 var(--sheet-shadow);
+	--shadow-xs: 1px 1px 0 var(--sheet-shadow);
+	--shadow-sm: 2px 2px 0 var(--sheet-shadow);
+	--shadow-md: 3px 3px 0 var(--sheet-shadow);
+	--shadow-lg: 4px 4px 0 var(--sheet-shadow);
+	--shadow-xl: 6px 6px 0 var(--sheet-shadow);
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);
@@ -173,6 +227,11 @@
 	--color-border: var(--border);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
+	--color-paper: var(--paper);
+	--color-paper-2: var(--paper-2);
+	--color-paper-3: var(--paper-3);
+	--color-mark: var(--mark);
+	--color-mark-soft: var(--mark-soft);
 }
 
 * {
@@ -180,28 +239,65 @@
 }
 
 body {
-	background: var(--color-background);
+	background-color: var(--color-background);
 	color: var(--color-foreground);
-	font-family: var(--font-ui);
+	/* The reading face is the default. Furniture opts into the monospace with
+	   .font-ui; that way an unmarked string of words reads as prose, which is
+	   most of what this app prints. */
+	font-family: var(--font-prose);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * Paper tooth: one fixed grain over the whole window.
+ *
+ * It is a single 160px tile of fractal noise at 5.5% alpha, multiplied over
+ * whatever is underneath, so every surface in the app shares one stock. Pointer
+ * events pass through it and it sits above the layout but below nothing that
+ * needs reading — dialogs included, which is the point: they are printed on the
+ * same sheet.
+ */
+body::after {
+	content: "";
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+	pointer-events: none;
+	opacity: 0.5;
+	mix-blend-mode: multiply;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.055'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23grain)'/%3E%3C/svg%3E");
+	background-size: 160px 160px;
+}
+
+.dark body::after {
+	/* The night stock takes less grain and takes it warm: screen blending a
+	   neutral noise lifts the blue channel first and the paper reads grey. */
+	opacity: 0.28;
+	mix-blend-mode: soft-light;
+}
+
+::selection {
+	background: var(--mark-soft);
+	color: var(--foreground);
 }
 
 /* Teaching prose (the markdown renderer's container gets .lh-prose):
-   Source Sans 3 with the size/leading tokens; emphasis color bound to
-   the settings-ready tokens. */
+   the serif with the size/leading tokens; emphasis color bound to the
+   settings-ready tokens. */
 .lh-prose {
 	font-family: var(--font-prose);
 	font-size: var(--lh-prose-size);
 	line-height: var(--lh-prose-leading);
 }
 
-/* Session-name weight (owner, fix wave round 3): with the serif toggle
-   OFF, --font-title resolves to the prose font — Source Sans 3 is loaded
-   as a VARIABLE font, and without an explicit weight the titles render at
-   400, a whisper next to CMU's bold-only face. Request 900: the variable
-   font takes it, and CMU (a single 700 face) snaps to its nearest
-   available weight — the same rendering it already had. */
+/* Session titles: the book face at its bold cut. The serif has one weight
+   family, so 700 is the bold — no synthetic black, no whisper either. The
+   small negative tracking is what makes a 32px serif sit as a title rather
+   than as a paragraph that happens to be large. */
 .font-title {
-	font-weight: 900;
+	font-weight: 700;
+	letter-spacing: -0.012em;
 }
 
 .lh-prose :where(strong, b) {
@@ -326,19 +422,18 @@ body {
  * unlayered author CSS wins regardless of order).
  * ============================================================ */
 
-/* Code blocks: no header bar — one quiet rounded tint so code reads as a
-   unit. The tint is DARKER than the page (muted #1c1c1c was LIGHTER than the
-   background #141414 and read as raised — owner note, chrome-melt tweaks
-   2026-09-19) plus a subtle hairline outline. (md-blocks renders its own
-   hover copy corner.) */
+/* Code blocks: no header bar — one quiet tint so code reads as a unit. The
+   tint is the page colour pulled toward the ink, so it works on paper the way
+   it worked on the old night ground, plus a hairline outline. (md-blocks
+   renders its own hover copy corner.) */
 /* Inline code shares only the block surface, keeping its inline geometry. */
 [data-streamdown="inline-code"],
 [data-streamdown="code-block"] {
 	border: 1px solid var(--border);
-	background: color-mix(in oklab, var(--background) 86%, black);
+	background: color-mix(in oklab, var(--background) 88%, var(--foreground));
 }
 [data-streamdown="code-block"] {
-	border-radius: 0.75rem;
+	border-radius: var(--radius-lg);
 	padding: 0.375rem;
 }
 [data-streamdown="code-block-header"] {
@@ -564,7 +659,22 @@ body {
    session-name-serif toggle overrides this var at runtime, so the
    .font-title utility must read it through var(), not carry a baked copy. */
 @theme {
-	--font-title: "lh-cmu", serif;
+	--font-title: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Charter, Georgia, "Times New Roman", serif;
+
+	/* The semantic ramps, retuned to the stock. The app says "correct" with
+	   green and "wrong" with red across a dozen query cards; stock Tailwind's
+	   #22c55e and #ef4444 were chosen against a dark ground and fall to 2.2:1
+	   and 3.9:1 on paper. Same names, paper-legible ink: every `text-green-500`
+	   and `bg-red-500/15` in the tree lands on the palette without being
+	   touched, and an answer card still reads at a glance. */
+	--color-green-500: var(--ramp-green-500);
+	--color-green-600: var(--ramp-green-600);
+	--color-red-300: var(--ramp-red-300);
+	--color-red-400: var(--ramp-red-400);
+	--color-red-500: var(--ramp-red-500);
+	--color-red-600: var(--ramp-red-600);
+	--color-amber-500: var(--ramp-amber-500);
+	--color-scrim: var(--scrim);
 }
 
 /* Card enter (owner round, 2026-10-05): the transcript cards' one-shot

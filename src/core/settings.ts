@@ -517,7 +517,9 @@ export const FACTORY_SETTINGS: FactorySettings = {
 	general: { autoUpdate: true },
 	dictation: { language: "en" },
 	appearance: {
-		mode: "dark",
+		/* Light is the factory face: the app is paper first, and dark is the
+		   alternate the main-UI toggle switches to. */
+		mode: "light",
 		background: null, // the dark default (#141414) lives in the mode's derivation curve
 		fontFamily: null, // Source Sans 3
 		proseFontSize: 16,

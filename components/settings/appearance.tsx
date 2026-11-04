@@ -6,10 +6,10 @@
  *
  * Why variables and not className swaps: every seam the settings touch was
  * built token-first (--font-prose, --lh-prose-size, --lh-ink-strong, …),
- * so application is setProperty and nothing re-renders. The ONE thing the
- * variables can't reach — the mode — is dark-only this wave (the light
- * palette is designed in the later design wave; <html class="dark"> is
- * static in app/layout.tsx).
+ * so application is setProperty and nothing re-renders. The mode is the one
+ * exception: it swaps the whole palette, so it toggles `.dark` on <html>.
+ * The first paint is handled before React by the inline script in
+ * app/layout.tsx, which reads the mirrored localStorage value.
  *
  * The provider is mounted at the ROOT LAYOUT level (like ActivityProvider):
  * every page picks appearance up on load. The settings page writes a
@@ -107,15 +107,23 @@ export function staleVarNames(
 	return prevNames.filter((n) => !(n in nextVars));
 }
 
+/** The localStorage key the pre-paint script reads. Mirrors the record's
+ *  mode so a dark-mode learner never sees a white flash on load. */
+export const MODE_STORAGE_KEY = "connla.mode";
+
 interface AppearanceContextValue {
 	/** Resolved appearance; factory until the record arrives. */
 	appearance: ReturnType<typeof resolveAppearance>;
-	/** Called by the settings page after a successful section PUT. */
+	/** The record's raw appearance delta — what a writer must PUT back, so a
+	 *  toggle never freezes resolved defaults into the record. */
+	delta: AppearanceSettings | undefined;
+	/** Called by any writer after a successful section PUT. */
 	onAppearanceChange: (delta: AppearanceSettings | undefined) => void;
 }
 
 const AppearanceContext = createContext<AppearanceContextValue>({
 	appearance: resolveAppearance(undefined),
+	delta: undefined,
 	onAppearanceChange: () => {},
 });
 
@@ -173,12 +181,24 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 		};
 	}, []);
 
+	// The mode: one class on <html>, and the same value mirrored for the
+	// pre-paint script. Runs before the vars so the pair moves together.
+	const mode = (delta?.mode ?? FACTORY_SETTINGS.appearance.mode) === "dark" ? "dark" : "light";
+	useEffect(() => {
+		document.documentElement.classList.toggle("dark", mode === "dark");
+		try {
+			window.localStorage.setItem(MODE_STORAGE_KEY, mode);
+		} catch {
+			/* private mode / storage denied — the class above still applies */
+		}
+	}, [mode]);
+
 	const onAppearanceChange = useCallback((next: AppearanceSettings | undefined) => {
 		setDelta(next);
 	}, []);
 
 	const value = useMemo(
-		() => ({ appearance: resolveAppearance(delta), onAppearanceChange }),
+		() => ({ appearance: resolveAppearance(delta), delta, onAppearanceChange }),
 		[delta, onAppearanceChange],
 	);
 	return <AppearanceContext.Provider value={value}>{children}</AppearanceContext.Provider>;

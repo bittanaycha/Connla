@@ -186,19 +186,30 @@ export function AppearanceSection({
 
 	return (
 		<>
-			<SettingsRow label="Mode" hint="Coming soon" testid="row-mode" dimmed>
-				<ThinSelect value="dark" ariaLabel="mode" onChange={() => {}} testid="select-mode" disabled>
+			<SettingsRow label="Mode" hint="Paper or the cold room" testid="row-mode">
+				<ThinSelect
+					value={resolved.mode}
+					ariaLabel="mode"
+					testid="select-mode"
+					onChange={(next) =>
+						onSectionChange({
+							...appearance,
+							mode: next === "dark" ? "dark" : "light",
+						})
+					}
+				>
+					<option value="light">Light</option>
 					<option value="dark">Dark</option>
 				</ThinSelect>
 			</SettingsRow>
 			<SettingsRow
 				label="Background"
-				hint={`Empty = ${resolved.background ?? "#141414"}`}
+				hint={`Empty = ${resolved.background ?? (resolved.mode === "dark" ? "#18140d" : "#faf6ea")}`}
 				testid="row-background"
 			>
 				<CommitInput
 					value={appearance?.background ?? ""}
-					placeholder="#141414"
+					placeholder="#faf6ea"
 					ariaLabel="background hex"
 					testid="input-background"
 					onCommit={(v) => onSectionChange({ ...appearance, background: v === "" ? null : v })}

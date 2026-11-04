@@ -23,23 +23,23 @@ import { CONFIDENCE_STOPS } from "@/src/core";
 
 /** The six-step ramp (owner ruling): 0 red → 100 emerald, indexed by stop. */
 export const CONFIDENCE_COLORS: readonly string[] = [
-	"#ef4444", // 0
-	"#f97316", // 30
-	"#eab308", // 50
-	"#84cc16", // 70
-	"#22c55e", // 90
-	"#10b981", // 100
+	"#a8382f", // 0   — the paper palette's danger
+	"#b5642f", // 30  — peach
+	"#a8823a", // 50  — ochre
+	"#7f8c49", // 70  — moss
+	"#5b8459", // 90  — sage
+	"#2f7d63", // 100 — mint
 ];
 
 /** The rail's paint for a stop value (0–100). */
 export function confidenceRailStyle(value: number): CSSProperties {
 	const color = CONFIDENCE_COLORS[CONFIDENCE_STOPS.indexOf(value)] ?? CONFIDENCE_COLORS[2]!;
 	return {
-		backgroundColor: "#141414",
+		backgroundColor: "var(--paper-3)",
 		backgroundImage: [
 			`linear-gradient(90deg, ${color} 0%, ${color} ${value}%, transparent ${value}%, transparent 100%)`,
 			...[30, 50, 70, 90].map(
-				() => "linear-gradient(90deg, rgba(230,230,230,0.35), rgba(230,230,230,0.35))",
+				() => "linear-gradient(90deg, rgba(37,35,29,0.22), rgba(37,35,29,0.22))",
 			),
 		].join(", "),
 		backgroundSize: ["100% 100%", "1px 100%", "1px 100%", "1px 100%", "1px 100%"].join(", "),

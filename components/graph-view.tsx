@@ -66,7 +66,7 @@
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { NotesImportControl, NotesImportErrors, NotesImportNotices, useNotesImport } from "@/components/notes-import.tsx";
 import Link from "next/link";
-import { FileTextIcon, ListTreeIcon, Loader2Icon, SearchIcon, SettingsIcon, WaypointsIcon } from "lucide-react";
+import { FileTextIcon, ListTreeIcon, Loader2Icon, SearchIcon, SettingsIcon } from "lucide-react";
 import { incrementalLayout, propositionSessionHref, type GraphCostSummary, type GraphNode, type GraphSnapshot } from "@/src/core";
 import { planCostLabel } from "@/components/usage-format";
 import { GraphCanvasRenderer, type GraphRenderSettings } from "./graph-canvas.ts";
@@ -393,7 +393,7 @@ function GraphCostPanel({ costs }: { costs: GraphCostSummary }) {
 	return (
 		<div className="w-80 max-w-[calc(100vw-1.5rem)] rounded-xl border bg-card/95 p-3 text-xs shadow-lg backdrop-blur">
 			<div className="mb-2 flex items-baseline justify-between">
-				<span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+				<span className="text-[10px] font-medium font-ui uppercase tracking-wide text-muted-foreground">
 					Graph pipeline costs
 				</span>
 				<span className="text-foreground tabular-nums">
@@ -556,7 +556,7 @@ function GraphSettingsControl({
 						    the whole build (splat/blur/readback/blit), not just
 						    the paint. */}
 						<div className="mt-1.5 flex flex-col gap-1.5 border-t pt-1.5">
-							<span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+							<span className="text-[10px] font-medium font-ui uppercase tracking-wide text-muted-foreground">
 								Regions
 							</span>
 							<label className="flex cursor-pointer items-center justify-between text-[11px] text-muted-foreground">
@@ -677,7 +677,7 @@ function GraphSettingsControl({
 						    Order (user 2026-09-17): general forces first; depth
 						    anchor + its gray-out-able controls last. */}
 						<div className="mt-1.5 flex flex-col gap-1.5 border-t pt-1.5">
-							<span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+							<span className="text-[10px] font-medium font-ui uppercase tracking-wide text-muted-foreground">
 								Physics
 							</span>
 							<SettingSlider
@@ -1468,9 +1468,14 @@ export function GraphView({
 			{isEmpty ? (
 				// The empty graph keeps the first action clear without zero-valued statistics.
 				<div className="flex h-full w-full items-center justify-center px-4">
-					<div className="flex flex-col items-center gap-3 text-center text-muted-foreground">
-						<WaypointsIcon className="size-10 opacity-40" strokeWidth={1.25} />
-						<div className="text-lg font-medium text-foreground">Knowledge graph</div>
+					<div className="flex flex-col items-center gap-4 text-center text-muted-foreground">
+						{/* The opening plate, quietly: the empty graph is the first thing
+						    a new vault shows, so it carries the picture rather than an
+						    icon. Mounted as a print, like the splash shows it. */}
+						<figure className="w-full max-w-[19rem] border border-border bg-[#e9e2d2] p-1.5 shadow-sm">
+							<img src="/intro/connla-well-small.png" alt="" aria-hidden="true" draggable={false} className="block w-full" />
+						</figure>
+						<div className="font-title text-xl text-foreground">Knowledge graph</div>
 						<div className="max-w-sm text-sm">
 							<p>Start a session to begin learning.</p>
 							<p className="mt-1 text-xs">Attach your material with the paperclip or drag and drop.</p>

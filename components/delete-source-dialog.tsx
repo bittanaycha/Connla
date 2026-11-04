@@ -54,7 +54,7 @@ export function DeleteSourceDialog({ open, sources, folders, onDelete, onClose }
 		catch (error) { setFailure(error instanceof Error ? error.message : String(error)); }
 		finally { setBusy(false); }
 	};
-	return createPortal(<div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80" {...backdrop}>
+	return createPortal(<div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim" {...backdrop}>
 		<DeleteSourceBody sources={sources} folders={folders} deleteSessions={deleteSessions} onDeleteSessions={setDeleteSessions}
 			busy={busy} failure={failure} onClose={onClose} onRun={() => { void run(); }} />
 	</div>, document.body);

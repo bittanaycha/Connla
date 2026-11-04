@@ -1,5 +1,5 @@
 /**
- * LearnHarness — the Electron shell (wrapper milestone, 2026-09-17).
+ * Connla — the Electron shell (wrapper milestone, 2026-09-17).
  *
  * What this process is and is not:
  *   IS:  a thin launcher + security guard around the app's real server —
@@ -43,15 +43,16 @@ const path = require("node:path");
 // renderer owns the number; this is the IPC widen target).
 const SIDEBAR_AUTOCLOSE = 928;
 
-const PRODUCT_NAME = "LearnHarness";
+const PRODUCT_NAME = "Connla";
 
 // APP NAME → userData (owner, 2026-10-10): the Application Support dir is
-// exactly "LearnHarness" in dev AND packaged. Packaged Electron would
+// exactly "Connla" in dev AND packaged. Packaged Electron would
 // otherwise derive it from package.json "name" (now lowercase
 // "learnharness"), and productName metadata alone doesn't reach app.name.
 // Must run before the LH_DEV_URL suffix below — dev becomes
-// "LearnHarness-dev".
+// "Connla-dev".
 app.setName(PRODUCT_NAME);
+
 const AUTH_FILE = () => path.join(app.getPath("userData"), "auth.json");
 const DATA_DIR = () => path.join(app.getPath("userData"), "data");
 
@@ -76,6 +77,32 @@ function serverEntry() {
 // MUST run before the single-instance lock — a helper is a second
 // instance of this very binary, and before the LH_DEV_URL redirect — the
 // helper owns no user data at all.
+/**
+ * DATA MIGRATION (Connla rename, 2026-11-04): the app was LearnHarness, and
+ * its sessions, keys and settings live under that Application Support name.
+ * Copy once into the new directory so the rename does not read as data loss.
+ * Copied rather than moved: running the old build afterwards still finds its
+ * own data instead of an empty shell.
+ *
+ * Called only on the normal boot path — the --browser-service helper owns no
+ * user data, and its test fixture stubs `app` without getPath. The narrow fs
+ * stub in the electron tests is skipped for the same reason.
+ */
+const LEGACY_PRODUCT_NAME = "LearnHarness";
+function migrateLegacyUserData() {
+	if (typeof fs.existsSync !== "function" || typeof fs.cpSync !== "function") return;
+	const target = app.getPath("userData");
+	const legacy = path.join(path.dirname(target), LEGACY_PRODUCT_NAME);
+	if (fs.existsSync(target) || !fs.existsSync(legacy)) return;
+	try {
+		fs.cpSync(legacy, target, { recursive: true });
+	} catch (err) {
+		// A failed copy must not stop the boot; the learner starts empty and
+		// the old directory is untouched.
+		console.error("legacy data migration failed:", err);
+	}
+}
+
 if (process.argv.includes("--browser-service")) {
 	const { waitForBrowserService } = require("./browser-service-readiness.cjs");
 	// Own the helper's entire startup lifetime, including the readiness wait.
@@ -117,6 +144,10 @@ if (process.argv.includes("--browser-service")) {
 	if (process.env.LH_DEV_URL) {
 		app.setPath("userData", `${app.getPath("userData")}-dev`);
 	}
+
+	// AFTER the dev suffix, so each shell adopts its own predecessor:
+	// LearnHarness → Connla packaged, LearnHarness-dev → Connla-dev in dev.
+	migrateLegacyUserData();
 
 	// The whole normal boot — lock included — lives in this else: a helper is
 	// a SECOND instance of this very binary on purpose (the running app owns

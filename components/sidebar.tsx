@@ -6,10 +6,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { MenuShell } from "@/components/menu-shell";
 import { DeleteSessionDialog } from "@/components/delete-session-dialog";
 import type { ChatDeleteMode } from "@/src/core";
-import { DumbbellIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon } from "lucide-react";
+import { DumbbellIcon, FishIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon } from "lucide-react";
 import { ActivitySection } from "@/components/activity-dock";
 import { CoverageMenuBlock } from "@/components/extraction-coverage";
-import { LhMark } from "@/components/lh-mark";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { BrailleSpinner } from "@/components/braille-spinner";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { SettingsDialogProvider, useSettingsDialog } from "@/components/settings/settings-dialog.tsx";
@@ -317,13 +317,12 @@ export function SessionRow({
 		>
 			<SessionStatus busy={chat.busy || chat.compacting} />
 			<span className="min-w-0 flex-1">
-				{/* Titles are the learner's/teacher's WORDS — Source Sans 3, the
-				    same voice the words were typed in (every input is lh-prose);
-				    the meta line below stays JetBrains Mono (machine data). One
-				    rule, finally applied to the picker too (owner, typography
-				    round): mono = chrome, Source Sans = human words. */}
+				{/* Titles are the learner's/teacher's WORDS — the serif, the same
+				    voice the words were typed in; the meta line below stays
+				    JetBrains Mono (machine data). One rule: mono = chrome,
+				    serif = human words. */}
 				<span className="block truncate font-prose text-(length:--lh-prose-size)">{chat.title}</span>
-				<span className="block text-xs text-muted-foreground">{sessionMeta(chat)}</span>
+				<span className="block font-ui text-xs text-muted-foreground">{sessionMeta(chat)}</span>
 			</span>
 			{/* The dumbbell rides the FAR RIGHT (owner round 6, 2026-10-05) —
 			    was left of the name; right-aligned keeps the titles flush with
@@ -658,10 +657,11 @@ function SessionsSidebar() {
 				    window's drag surface and starts after the traffic lights
 				    (.lh-lights-gutter); in the browser those classes are inert. */}
 				<div className="lh-drag lh-lights-gutter flex items-center justify-between px-4 py-3">
-					{/* The owner's mark (2026-09-17) replaces the "LH" text — still the
-					    home link, still vertically centered by the band's items-center.
-					    The 92px .lh-lights-gutter keeps it clear of the traffic lights
-					    with the lights' own edge-inset as the gap. */}
+					{/* The mark is the salmon of the well — drawn by the icon set, not
+					    by hand: a hand-built fish turns to a blob at 24px, and the
+					    illustration already carries the story everywhere else. Still
+					    the home link, still centered by the band's items-center; the
+					    92px .lh-lights-gutter keeps it clear of the traffic lights. */}
 					{/* Hover mirrors the ghost toggle buttons (owner ask, 2026-09-17):
 					    same size-9 chip geometry, same hover:bg-accent treatment. */}
 					<Hint
@@ -678,7 +678,7 @@ function SessionsSidebar() {
 							aria-label="Home"
 							className="lh-no-drag flex size-9 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50"
 						>
-							<LhMark className="size-6" />
+							<FishIcon className="size-5" strokeWidth={1.5} />
 						</Link>
 					</Hint>
 					<Hint label="Close sidebar" action="toggle-sidebar">
@@ -692,6 +692,7 @@ function SessionsSidebar() {
 							<PanelLeftCloseIcon className="size-4" />
 						</Button>
 					</Hint>
+					<ThemeToggle />
 				</div>
 
 				{/* Two doors, STACKED (owner round 8, 2026-10-05 — was a
@@ -703,7 +704,7 @@ function SessionsSidebar() {
 						type="button"
 						data-testid="new-session"
 						onClick={() => void newSession()}
-						className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs uppercase tracking-wider text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-ui uppercase tracking-wider text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 					>
 						<PlusIcon className="size-3" />
 						Teaching
@@ -713,7 +714,7 @@ function SessionsSidebar() {
 						type="button"
 						data-testid="new-session-practice"
 						onClick={() => router.push("/chat/new?mode=practice")}
-						className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs uppercase tracking-wider text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-ui uppercase tracking-wider text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 					>
 						<DumbbellIcon className="size-3" />
 						Practice
@@ -722,7 +723,7 @@ function SessionsSidebar() {
 				</div>
 
 				<div className="mx-3 mb-2 flex items-center gap-2">
-					<span className="text-xs uppercase tracking-widest text-muted-foreground/70">Sessions</span>
+					<span className="text-xs font-ui uppercase tracking-widest text-muted-foreground/70">Sessions</span>
 					<Hint label="Search sessions" action="sessions-search" side="bottom">
 					<span className="relative flex-1">
 						<Input
@@ -797,7 +798,7 @@ function SessionsSidebar() {
 							data-testid={`kind-filter-${f}`}
 							onClick={() => setFilter(f)}
 							className={cn(
-								"flex-1 rounded-sm px-2 py-1 text-[11px] uppercase tracking-wider transition-colors",
+								"flex-1 rounded-sm px-2 py-1 text-[11px] font-ui uppercase tracking-wider transition-colors",
 								kindFilter === f
 									? "bg-accent text-foreground"
 									: "text-muted-foreground hover:text-foreground",
@@ -857,7 +858,7 @@ function SessionsSidebar() {
 								type="button"
 								onClick={() => openSettings()}
 								data-testid="settings-entry"
-								className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs uppercase tracking-wider text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+								className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-ui uppercase tracking-wider text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 							>
 								<SettingsIcon className="size-3" />
 								Settings

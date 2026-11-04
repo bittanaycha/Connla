@@ -7,21 +7,33 @@ import { ActivityProvider } from "@/components/activity-dock";
 import { ServerEventsProvider } from "@/components/server-events";
 import { AppearanceProvider } from "@/components/settings/appearance";
 import UpdateBanner from "@/components/update-banner";
+import { IntroSplash } from "@/components/intro-splash";
 
-// Chrome = JetBrains Mono, teaching prose = Source Sans 3, titles = CMU
-// Serif (the bundled lh-cmu @font-face in globals.css — no CDN).
+// Furniture = JetBrains Mono, self-hosted through next/font. Prose and titles
+// are the platform book face (see --font-prose in globals.css); Source Sans 3
+// stays loaded as the fallback the appearance settings write behind a chosen
+// font, so a machine without Iowan still has a designed sans underneath.
 const ui = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains" });
 const prose = Source_Sans_3({ subsets: ["latin"], variable: "--font-sans3" });
 
 export const metadata: Metadata = {
-	title: "Learning Harness",
-	description: "A teacher agent with a memory — sessions, quizzes, and a knowledge graph of what you know.",
+	title: "Connla",
+	description: "A teacher with a memory. Sessions, quizzes, and a knowledge graph of what you know.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en" className={`dark ${ui.variable} ${prose.variable}`}>
+		<html lang="en" className={`${ui.variable} ${prose.variable}`} suppressHydrationWarning>
 			<body className="min-h-dvh antialiased">
+				{/* Mode before first paint: the provider writes the mirror, this
+				    reads it. Without it a dark-mode load renders one paper frame
+				    and then snaps to night. */}
+				<script
+					dangerouslySetInnerHTML={{
+						__html:
+							'try{if(localStorage.getItem("connla.mode")==="dark")document.documentElement.classList.add("dark")}catch(e){}',
+					}}
+				/>
 			{/* The notification channel rides OUTSIDE everything: sidebar, dock,
 				 and pages all subscribe as the polls retire (push S3, 2026-10-02). */}
 			<ServerEventsProvider>
@@ -35,6 +47,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 			</ServerEventsProvider>
 			{/* Auto-update banner (Wave C): fixed card, Electron-only pushes. */}
 			<UpdateBanner />
+			{/* The opening plate: once per launch, over everything, gone on the
+			    first click, key, or two seconds — whichever comes first. */}
+			<IntroSplash />
 		</body>
 		</html>
 	);

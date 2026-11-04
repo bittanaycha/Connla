@@ -353,7 +353,7 @@ export function ChainTableBody({
 			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
 				{/* The TOP rule (owner round 5: the table is framed — a line under
 			    the header, a line under the last group, lines between groups). */}
-				<div className="sticky top-0 z-10 flex shrink-0 items-center gap-1 border-b border-border/60 bg-background/80 px-3 py-1.5 text-[11px] uppercase tracking-widest text-muted-foreground/70 backdrop-blur">
+				<div className="sticky top-0 z-10 flex shrink-0 items-center gap-1 border-b border-border/60 bg-background/80 px-3 py-1.5 font-ui text-[11px] uppercase tracking-widest text-muted-foreground/70 backdrop-blur">
 					<button
 						type="button"
 						data-testid="sort-name"
@@ -445,7 +445,7 @@ export function ChainTableBody({
 								{onOrganizationChange && group.birth && group.kind !== null
 									? <EditableSourceName name={group.label ?? ""} muted={empty} onSave={(name) => onOrganizationChange({ action: "rename-source", id: group.birth!, name })} />
 									: <span className={`min-w-0 flex-1 truncate text-sm font-medium${empty ? " text-muted-foreground/60" : ""}`}>{group.label ?? <span className="text-muted-foreground/60">unlabeled</span>}</span>}
-								{group.kind === "notes" && <span className="text-[11px] uppercase tracking-widest text-muted-foreground/60">notes</span>}
+								{group.kind === "notes" && <span className="font-ui text-[11px] uppercase tracking-widest text-muted-foreground/60">notes</span>}
 								<span className="w-14 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
 									{group.nodeIds.length}
 								</span>

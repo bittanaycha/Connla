@@ -38,9 +38,9 @@ describe("md-blocks — code", () => {
 		assert.ok(surface, "both code paths share one surface rule");
 		assert.deepEqual(surface.trim().split(/;\s*/).filter(Boolean), [
 			"border: 1px solid var(--border)",
-			"background: color-mix(in oklab, var(--background) 86%, black)",
-		], "share the existing block surface, not block layout, padding or radius");
-		assert.match(css, /\[data-streamdown="code-block"\]\s*\{\s*border-radius: 0\.75rem;\s*padding: 0\.375rem;\s*\}/, "block geometry stays block-only and unchanged");
+			"background: color-mix(in oklab, var(--background) 88%, var(--foreground))",
+		], "share one block surface, not block layout, padding or radius");
+		assert.match(css, /\[data-streamdown="code-block"\]\s*\{\s*border-radius: var\(--radius-lg\);\s*padding: 0\.375rem;\s*\}/, "block geometry stays block-only and follows the printed corner");
 	});
 
 	it("code fences delegate to streamdown's CodeBlock with a hover copy corner", () => {
@@ -197,7 +197,7 @@ describe("md-blocks — key-idea callouts (GitHub alerts, owner round 2026-10-07
 		assert.ok(!html.includes("[!IMPORTANT]"), "the marker line never leaks as text");
 		// The owner's minimal law: sharp corners (no rounded), white stroke,
 		// no background, no label, no icon — and the box hugs its text.
-		assert.match(html, /border-white/, "white stroke");
+		assert.match(html, /border-foreground\/20/, "ink stroke");
 		assert.match(html, /w-fit/, "width: fit-content — the hug");
 		assert.ok(!html.includes("rounded"), "sharp corners — no rounding anywhere");
 		assert.ok(!html.includes("bg-card") && !html.includes("bg-background"), "transparent — no background");
