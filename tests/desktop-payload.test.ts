@@ -9,6 +9,13 @@ import { describe, it } from "node:test";
 const source = fs.readFileSync(new URL("../scripts/build-server.mjs", import.meta.url), "utf8");
 const STANDALONE = path.join(".next", "standalone");
 const PROMPT = path.join("src", "agent", "system-prompt.md");
+const MAP_LAYERS = [
+	"ne_110m_land.geojson",
+	"ne_50m_land.geojson",
+	"ne_110m_admin_0_countries.geojson",
+	"ne_110m_rivers_lake_centerlines.geojson",
+	"ne_110m_lakes.geojson",
+];
 
 function withPayload(test: (fixture: {
 	root: string;
@@ -26,6 +33,7 @@ function withPayload(test: (fixture: {
 		write(path.join(STANDALONE, "server.js"));
 		write(path.join(".next", "static", "runtime.js"));
 		write(path.join("public", "asset.txt"));
+		for (const layer of MAP_LAYERS) write(path.join("public", "geo", layer));
 		write(path.join(STANDALONE, PROMPT));
 		write(path.join(STANDALONE, "src", "agent", "prompts", "teacher", "20-teaching.md"));
 		test({ root, write, run: () => spawnSync(process.execPath, [path.join(root, "scripts", "build-server.mjs")], {

@@ -281,8 +281,8 @@ export interface ProberToolContext extends ProbeDoneContext {
 }
 
 /** The prober's tool set: probe quiz (no nodeId) + ask + the learner-fs
- *  set + probe_done + the two phase-omnipresent job dispatch tools +
- *  (wave 7, gated) the graph-map reader. `enabled` is the resolved
+ *  set + probe_done + the two phase-omnipresent job dispatch tools + the
+ *  synchronous map + (wave 7, gated) the graph-map reader. `enabled` is the resolved
  *  settings seam (core/pending.ts): any tool explicitly false is dropped
  *  from the registry. probe_done stays always-on regardless — it is how
  *  the phase ENDS; a prober that can never conclude is a lockout. */
@@ -336,6 +336,9 @@ export function createProberTools(
 				// remains available without a search-provider key.
 				...(jobs.research ? { research: jobs.research } : {}),
 				pdf: jobs.pdf!,
+				// Synchronous maps are phase-omnipresent too: a direct geography
+				// request or a map-based probe question needs no plan context.
+				map: createMapTool(),
 				// The map reader (wave 7): present only when the settings gate
 				// opened.
 				...(ctx.graphStore

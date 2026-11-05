@@ -1,6 +1,6 @@
 ## Pronunciation — put the sound beside the word
 
-When the sound of a word is part of the lesson — a new word, a name the learner will say aloud, a contrast between two sounds — write it as a spoken-word link: `[bonjour](/pronounce/fr)`. The lesson renders the word with a small speaker and a Forvo link.
+When the sound of a word matters — a new word, a name the learner will say aloud, a contrast between two sounds — write it as a spoken-word link: `[bonjour](/pronounce/fr)`. The message renders the word with a small speaker and a Forvo link.
 
 - Use the language code: `en`, `fr`, `ja`, `cy`, `it`, `es`, `pt`, `zh`, `ga`, `gd`.
 - Put the speaker on the word itself, not on a whole sentence. One speaker per word is enough.

@@ -1,9 +1,27 @@
 import { Type, type Static } from "typebox";
 
-/** One [longitude, latitude] pair in degrees. */
-const lonLat = Type.Tuple([Type.Number({ minimum: -180, maximum: 180 }), Type.Number({ minimum: -90, maximum: 90 })], {
+/** One [longitude, latitude] pair in degrees.
+ *
+ * The wire shape is a normal array (`items` is ONE schema), not a TypeBox
+ * tuple: OpenAI-compatible endpoints reject the draft-07 tuple form where
+ * `items` is an array. The TypeScript tuple type is preserved for callers. */
+const lonLat = Type.Unsafe<[number, number]>({
+	type: "array",
+	items: Type.Number({ minimum: -360, maximum: 360 }),
+	minItems: 2,
+	maxItems: 2,
 	description: "[longitude, latitude] in degrees",
 });
+
+/** Pixel offset pair; same wire-shape rule as lonLat. */
+const offset2d = (description: string) =>
+	Type.Unsafe<[number, number]>({
+		type: "array",
+		items: Type.Number({ minimum: -260, maximum: 260 }),
+		minItems: 2,
+		maxItems: 2,
+		description,
+	});
 
 const hexColor = Type.String({
 	minLength: 4,
@@ -37,11 +55,7 @@ const area = Type.Object({
 const marker = Type.Object({
 	at: lonLat,
 	label: Type.Optional(Type.String({ maxLength: 80 })),
-	offset: Type.Optional(
-		Type.Tuple([Type.Number({ minimum: -260, maximum: 260 }), Type.Number({ minimum: -260, maximum: 260 })], {
-			description: "Label offset in pixels from the dot. Default [9, -9].",
-		}),
-	),
+	offset: Type.Optional(offset2d("Label offset in pixels from the dot. Default [9, -9].")),
 	size: Type.Optional(Type.Number({ minimum: 2, maximum: 12 })),
 	color: Type.Optional(hexColor),
 });
@@ -61,11 +75,7 @@ const route = Type.Object({
 const label = Type.Object({
 	text: Type.String({ minLength: 1, maxLength: 90 }),
 	at: lonLat,
-	offset: Type.Optional(
-		Type.Tuple([Type.Number({ minimum: -260, maximum: 260 }), Type.Number({ minimum: -260, maximum: 260 })], {
-			description: "Label offset in pixels from the point. Default [8, -8].",
-		}),
-	),
+	offset: Type.Optional(offset2d("Label offset in pixels from the point. Default [8, -8].")),
 	leader: Type.Optional(Type.Boolean({ description: "Draw a thin line from the point to the label. Defaults to false." })),
 	align: Type.Optional(Type.Union([Type.Literal("start"), Type.Literal("middle"), Type.Literal("end")])),
 	size: Type.Optional(Type.Number({ minimum: 9, maximum: 22 })),
@@ -89,15 +99,13 @@ export const mapInputSchema = Type.Object({
 		}),
 	),
 	view: Type.Object({
-		bbox: Type.Tuple(
-			[
-				Type.Number({ minimum: -180, maximum: 180 }),
-				Type.Number({ minimum: -90, maximum: 90 }),
-				Type.Number({ minimum: -180, maximum: 180 }),
-				Type.Number({ minimum: -90, maximum: 90 }),
-			],
-			{ description: "[west, south, east, north] in degrees. Example Europe: [-15, 34, 42, 71]." },
-		),
+		bbox: Type.Unsafe<[number, number, number, number]>({
+			type: "array",
+			items: Type.Number({ minimum: -360, maximum: 360 }),
+			minItems: 4,
+			maxItems: 4,
+			description: "[west, south, east, north] in degrees. Example Europe: [-15, 34, 42, 71].",
+		}),
 		projection: Type.Optional(
 			Type.Union([Type.Literal("equal-earth"), Type.Literal("natural-earth"), Type.Literal("mercator")], {
 				description: "Defaults to equal-earth. Use mercator only for small regional views.",

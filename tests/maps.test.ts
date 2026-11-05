@@ -24,6 +24,14 @@ const sample: MapInput = {
 	legend: [{ label: "France", color: "#3f5d6b" }],
 };
 
+test("map schema stays provider-compatible: no tuple `items` arrays", () => {
+	// OpenAI-compatible endpoints reject draft-07 tuples (`items: [ ... ]`)
+	// with "is not of types boolean, object". Coordinates are normal arrays
+	// with one numeric `items` schema, and the tuple TYPE stays in TS.
+	const wire = JSON.stringify(mapInputSchema);
+	assert.ok(!/"items":\s*\[/.test(wire), "tuple items arrays must never reach the provider");
+});
+
 test("map schema accepts a country group and renders an SVG", async () => {
 	assert.equal(Value.Check(mapInputSchema, sample), true);
 	const result = await renderMap(sample);
