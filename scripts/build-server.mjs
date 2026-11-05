@@ -89,4 +89,21 @@ for (const asset of [
 	}
 }
 
+// 3b) The map renderer reads its Natural Earth layers from public/geo at
+//     request time; step 1 copies public/, so a missing layer means the
+//     packaged app would draw empty maps.
+for (const layer of [
+	"ne_110m_land.geojson",
+	"ne_50m_land.geojson",
+	"ne_110m_admin_0_countries.geojson",
+	"ne_110m_rivers_lake_centerlines.geojson",
+	"ne_110m_lakes.geojson",
+]) {
+	const asset = path.join("public", "geo", layer);
+	if (!exists(path.join(STANDALONE, asset))) {
+		console.error(`[build-server] map layer missing from the payload: ${asset}`);
+		process.exit(1);
+	}
+}
+
 console.log("[build-server] server payload ready:", STANDALONE);

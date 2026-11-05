@@ -66,6 +66,12 @@ export const AUTH_KEYS: readonly AuthKeyInfo[] = [
 		description: "Hosted web search at ollama.com — requires an Ollama API key. Setting it activates search, not local models.",
 		docsUrl: "https://ollama.com/settings/keys",
 	},
+	{
+		id: "FORVO_API_KEY",
+		label: "Forvo",
+		description: "Optional key for human pronunciations. Without it, the speaker uses your system voice and links to the free Forvo search.",
+		docsUrl: "https://api.forvo.com/",
+	},
 ] as const;
 
 const AUTH_KEY_IDS: ReadonlySet<string> = new Set(AUTH_KEYS.map((k) => k.id));
@@ -195,6 +201,9 @@ export function validateKeyShape(id: string, rawValue: string): KeyShapeResult {
 		case "EXA_API_KEY":
 		case "OLLAMA_API_KEY":
 			// No documented key prefix: use the provider-key paste guard.
+			return nonEmpty(12);
+		case "FORVO_API_KEY":
+			// Forvo keys are plain hex with no public prefix.
 			return nonEmpty(12);
 		case "FIRECRAWL_API_KEY":
 			return value.startsWith("fc-")

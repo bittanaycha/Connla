@@ -317,6 +317,15 @@ export interface ShowImageDetails {
 	height: number;
 }
 
+/** The map tool's record payload. The SVG is drawn inline, never model-facing. */
+export interface MapDetails {
+	title: string;
+	caption?: string;
+	svg: string;
+	width: number;
+	height: number;
+}
+
 // ─── Artifact renderer registry (client extension point) ────────────────────
 
 /**

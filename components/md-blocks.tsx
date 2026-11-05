@@ -30,6 +30,9 @@
 import { cloneElement, isValidElement, useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { CheckIcon, CopyIcon, MaximizeIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ExternalLink, isExternalHref, MARKDOWN_LINK_CLASS } from "@/components/link-preview";
+import { PronounceWord } from "@/components/pronounce";
+import { isPronounceLanguage, type PronounceLanguage } from "@/src/core";
 import {
 	CodeBlock,
 	extractTableDataFromElement,
@@ -463,10 +466,67 @@ export function MarkdownStrong(props: ComponentProps<"strong"> & ExtraProps) {
 	);
 }
 
+/** Spoken-word links carry the language in a relative path: `/pronounce/fr`.
+ *  The aliases absorb tags the teacher or a copied link may use. */
+const PRONOUNCE_ALIASES: Record<string, string> = {
+	"en-gb": "en",
+	"en-us": "en",
+	"pt-br": "pt",
+	"zh-cn": "zh",
+	"zh-tw": "zh",
+	"cy-gb": "cy",
+	"ga-ie": "ga",
+	"gd-gb": "gd",
+};
+
+function pronounceLanguageFromHref(href: string): PronounceLanguage | null {
+	const match = /^\/pronounce\/([a-z]{2,3}(?:[-_][a-z]{2,4})?)\/?$/i.exec(href);
+	if (!match) return null;
+	const raw = match[1]!.toLowerCase().replace(/_/g, "-");
+	const normalized = PRONOUNCE_ALIASES[raw] ?? raw;
+	return isPronounceLanguage(normalized) ? normalized : null;
+}
+
+/** Link text without nested markup, for the spoken word and the Forvo link. */
+function plainLinkText(children: ReactNode): string {
+	if (typeof children === "string" || typeof children === "number") return String(children);
+	if (Array.isArray(children)) return children.map(plainLinkText).join("");
+	if (isValidElement<{ children?: ReactNode }>(children)) return plainLinkText(children.props.children);
+	return "";
+}
+
+export function MarkdownLink({
+	href,
+	children,
+	node: _node,
+	className,
+	...props
+}: ComponentProps<"a"> & ExtraProps) {
+	if (!href) return <a {...props}>{children}</a>;
+	const language = pronounceLanguageFromHref(href);
+	if (language) {
+		const word = plainLinkText(children).trim();
+		if (word) return <PronounceWord word={word} lang={language} />;
+	}
+	if (isExternalHref(href)) {
+		return (
+			<ExternalLink href={href} className={className} {...props}>
+				{children}
+			</ExternalLink>
+		);
+	}
+	return (
+		<a href={href} {...props} className={cn(MARKDOWN_LINK_CLASS, className)}>
+			{children}
+		</a>
+	);
+}
+
 export const mdComponents = {
 	code: MarkdownCode,
 	table: MarkdownTable,
 	span: MathDisplay,
 	strong: MarkdownStrong,
 	blockquote: MarkdownBlockquote,
+	a: MarkdownLink,
 };

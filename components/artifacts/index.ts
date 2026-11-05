@@ -4,6 +4,7 @@ import { DemoCard } from "@/components/artifacts/demo-card";
 import { JobCard, PdfJobCard } from "@/components/artifacts/job-card";
 import { VisualCard } from "@/components/artifacts/visual-card";
 import { ImageCard } from "@/components/artifacts/image-card";
+import { MapCard } from "@/components/artifacts/map-card";
 import { ProbeDoneCard } from "@/components/artifacts/probe-done-card";
 import { ToolCallCard } from "@/components/artifacts/tool-call-card";
 import { ProblemCard, ConcludeCard } from "@/components/practice-cards";
@@ -31,6 +32,9 @@ export const artifactRenderers: Record<string, ComponentType<ArtifactPartProps>>
 	visual: VisualCard,
 	// A learner image shown as-is (issue #363): the picture itself, inline.
 	show_image: ImageCard,
+	// A synchronous map (2026-11): inline SVG, PNG/SVG download, copy,
+	// fullscreen. No job or steer — the map is already in the turn.
+	map: MapCard,
 	// The probe conclusion: the assessment belongs to the learner as much as
 	// to the transcript (docs/archive/probe-teach-split.md §2). Plain v1 card.
 	probe_done: ProbeDoneCard,
