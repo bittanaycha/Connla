@@ -1469,11 +1469,11 @@ export function GraphView({
 				// The empty graph keeps the first action clear without zero-valued statistics.
 				<div className="flex h-full w-full items-center justify-center px-4">
 					<div className="flex flex-col items-center gap-4 text-center text-muted-foreground">
-						{/* The opening plate, quietly: the empty graph is the first thing
-						    a new vault shows, so it carries the picture rather than an
-						    icon. Mounted as a print, like the splash shows it. */}
+						{/* The same green plate the splash assembles, quietly: the empty
+						    graph is the first thing a new vault shows, so it carries the
+						    picture rather than an icon. Mounted as a print. */}
 						<figure className="w-full max-w-[19rem] border border-border bg-[#e9e2d2] p-1.5 shadow-sm">
-							<img src="/intro/connla-well-small.png" alt="" aria-hidden="true" draggable={false} className="block w-full" />
+							<img src="/intro/salmon-dither-small.png" alt="" aria-hidden="true" draggable={false} className="block w-full" />
 						</figure>
 						<div className="font-title text-xl text-foreground">Knowledge graph</div>
 						<div className="max-w-sm text-sm">

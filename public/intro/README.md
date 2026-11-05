@@ -1,16 +1,14 @@
 # Intro plate
 
-`connla-well.png` and `connla-well-small.png` are a dithered print of a
-public-domain illustration: *The Salmon of Knowledge*, 1904, from the
-Wikimedia Commons file `Salmon-of-Knoweldge-1904.jpg`.
+`salmon-dither.png` is the splash art and the app icon: a green dither of a
+public-domain illustration, *The Salmon of Knowledge*, 1904, from the Wikimedia
+Commons file `Salmon-of-Knoweldge-1904.jpg`. `salmon-dither-small.png` is the
+same picture at 760px for the empty graph state.
 
-Printed with unwalled-garden's plate tool:
+The splash does not show the file directly. It samples it into marks — one every
+9 CSS pixels, ink only, the print's paper stays still — assembles them on a
+swirl, resolves to the full-resolution print, and releases them again on an
+outward front. Sampling density and the single shared front are the two things
+that keep it legible; see `components/intro-splash.tsx`.
 
-```
-node tools/plate/cli.mjs <source> --ink bone --screen stipple --cell 2 \
-  --grain 0.60 --gain 0.9 --bias 0.03 --shape full --edge 1150 \
-  -o public/intro/connla-well.png
-```
-
-The small copy is the same command at `--edge 640`. The app icon
-(`build/icon.icns`) is a square crop of the large plate.
+The icon (`build/icon.icns`) is a square crop of the large plate.

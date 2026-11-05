@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Source_Sans_3 } from "next/font/google";
+import { GeistMono } from "geist/font/mono";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 import { AppShell, SidebarProvider } from "@/components/sidebar";
@@ -14,6 +15,9 @@ import { IntroSplash } from "@/components/intro-splash";
 // stays loaded as the fallback the appearance settings write behind a chosen
 // font, so a machine without Iowan still has a designed sans underneath.
 const ui = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains" });
+// The code face, used only where the app speaks as software rather than as a
+// book: the splash wordmark and the caret beside it.
+const code = GeistMono;
 const prose = Source_Sans_3({ subsets: ["latin"], variable: "--font-sans3" });
 
 export const metadata: Metadata = {
@@ -23,7 +27,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en" className={`${ui.variable} ${prose.variable}`} suppressHydrationWarning>
+		<html lang="en" className={`${ui.variable} ${prose.variable} ${code.variable}`} suppressHydrationWarning>
 			<body className="min-h-dvh antialiased">
 				{/* Mode before first paint: the provider writes the mirror, this
 				    reads it. Without it a dark-mode load renders one paper frame
