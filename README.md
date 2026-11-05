@@ -1,32 +1,39 @@
-<p align="center"><strong>Connla</strong></p>
-
-<p align="center">A teacher with a memory.</p>
-
-<p align="center">A fork of <a href="https://github.com/amosblomqvist/learnharness">LearnHarness</a>, dressed as the third Mimir.</p>
-
----
-
-**What this fork changes.** The engine is LearnHarness, unmodified: same agents, same session and practice machinery, same knowledge graph, same desktop shell. What changed is the skin. Warm paper and sage ink; a serif for text you read and a monospace for furniture; hard offset shadows where upstream had blur; one startup plate of the Salmon of Knowledge at Connla's Well. The brand reads Connla everywhere a learner can see it. The package name and bundle id stay `learnharness`, so upstream merges and update identity keep working.
-
-The plate is a 1904 public-domain illustration of the well, dithered to ink with the `plate` tool from `unwalled-garden` (`--ink bone --screen stipple --cell 2 --grain 0.60`). Files in `public/intro/`.
-
----
-
-<p align="center"><strong>An agent harness for learning.</strong></p>
+<p align="center"><img src="docs/assets/connla-banner.png" alt="Connla — a teacher with a memory."></p>
 
 <p align="center">
-  <a href="https://learnharness.ai">Download</a> ·
   <a href="#how-it-works">How it works</a> ·
+  <a href="#what-this-fork-changes">What this fork changes</a> ·
   <a href="docs/README.md">Documentation</a> ·
   <a href="https://github.com/amosblomqvist/learnharness/issues">Issues</a> ·
   <a href="https://discord.gg/5tCHHQEB2e">Discord</a>
 </p>
 
-LearnHarness uses AI agents to plan and teach lessons from your current understanding to your goal. It builds a detailed picture of what you understand and how you reason. That picture is updated as you learn.
+**Connla** is a skin fork of [LearnHarness](https://github.com/amosblomqvist/learnharness), an agent harness that plans and teaches lessons from your current understanding to your goal. The engine is LearnHarness, unmodified: same agents, same session and practice machinery, same knowledge graph, same desktop shell. What changed is how it looks.
 
-Instead of just giving you an explanation, it uses your answers and thinking to decide what you need next. Teaching builds understanding one reasoning step at a time. Practice makes it usable. A persistent knowledge graph carries it across sessions.
+LearnHarness builds a detailed picture of what you understand and how you reason, and updates that picture as you learn. Instead of giving you an explanation, it uses your answers and thinking to decide what you need next. Teaching builds understanding one reasoning step at a time. Practice makes it usable. A persistent knowledge graph carries it across sessions.
 
-![LearnHarness teaching session](docs/assets/teaching-session.png)
+## What this fork changes
+
+Warm paper and sage ink in place of the dark default; a serif for what you read and a monospace for furniture; hard offset shadows where upstream had blur; one startup plate of the Salmon of Knowledge. The brand reads Connla everywhere a learner can see it.
+
+The package name and bundle id stay `learnharness`, so upstream merges and update identity keep working.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/assets/connla-session-dark.png" alt="A teaching session in the dark theme: lesson text, a TEACHING divider, and a prediction card"></td>
+    <td width="50%"><img src="docs/assets/connla-session-light.png" alt="The same teaching session in the light theme"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Teaching session, dark</sub></td>
+    <td align="center"><sub>Teaching session, light</sub></td>
+  </tr>
+</table>
+
+## The startup plate
+
+<p align="center"><img src="docs/assets/connla-intro.jpg" width="560" alt="The startup screen: the Salmon of Knowledge arriving as pixels"></p>
+
+The plate is a 1904 public-domain illustration of Connla's Well, dithered to ink with the `plate` tool from `unwalled-garden` (`--ink bone --screen stipple --cell 2 --grain 0.60`). Files live in `public/intro/`. On each launch the print loads as 10px squares in a top-down sweep, sharpens into the etching, holds while `CONNLA` types itself out, then coarsens back into pixels and clears.
 
 ## How it works
 
@@ -47,9 +54,9 @@ What you are taught accumulates as propositions and reasoning chains: individual
 
 Future teaching sessions can read the graph instead of starting from scratch. Practice sessions can draw their material from it. It stores the ideas and their connections, not ratings of your ability.
 
-![LearnHarness knowledge graph](docs/assets/knowledge-graph.png)
-
 ## Download and get started
+
+This repository is a personal fork and does not publish its own builds. Get the app from upstream:
 
 **[Download from learnharness.ai](https://learnharness.ai)** · [GitHub Releases](https://github.com/amosblomqvist/learnharness/releases)
 
@@ -57,33 +64,35 @@ Future teaching sessions can read the graph instead of starting from scratch. Pr
 - **Windows (x64):** run the installer. It is currently unsigned; Windows may show an “unknown publisher” or SmartScreen warning.
 - **Linux (x64):** make the AppImage executable and open it, or install the Debian/Ubuntu `.deb`.
 
+Upstream builds ship the upstream skin. To run Connla, build this checkout with the steps under [Development](#development) and `npm run desktop:dist`.
+
 Choose your models, then start a session with what you want to understand. You can use provider API keys, supported subscription connections in the desktop app, an installed [Claude Code CLI](docs/claude-code.md), or a [custom OpenAI-compatible endpoint](docs/custom-providers.md), including a local model server. Optional dictation and web search use separate service keys. Web research can use a Tavily, Brave, Exa, Firecrawl, or Ollama key in Settings → Providers → Search. Ollama search uses its hosted service, not a local model server.
 
 See [Getting started](docs/getting-started.md) for model setup, dictation, files, and notes imports, and [context, caching, and costs](docs/compaction-accounting.md) for advanced cache preferences.
 
-All three platforms support in-app updates.
-
 ## Your keys, your data
 
-- **Your keys and models.** No LearnHarness subscription or markup. Billing depends on your provider, CLI configuration, subscription, or local setup. The live cost meter estimates known API costs, not subscription, CLI, or custom-endpoint charges.
+- **Your keys and models.** No subscription or markup. Billing depends on your provider, CLI configuration, subscription, or local setup. The live cost meter estimates known API costs, not subscription, CLI, or custom-endpoint charges.
 - **Local storage.** Your chats, graph, settings, and API keys live on your machine. Learning records are plain files you can inspect.
 - **External services.** Models run through your configured providers. Model requests send the context needed for the task; web research and dictation also contact external services. Local storage does not mean offline processing.
 - **Inspectable behavior.** System prompts are visible and editable. The app is open source under the AGPL-3.0 license.
 
-## Development and support
+## Development
 
 ```bash
 npm ci
 npm run dev        # http://localhost:3000
 npm test           # fixtures and fake providers
+npm run typecheck
+npm run lint
 ```
+
+The packaged app is built from the Next.js standalone output by `scripts/build-server.mjs`, then wrapped by `electron-builder`. `desktop:dist` also notarizes on macOS; on a machine without Xcode or a notary profile, pass `--config.mac.icon=build/icon.icns --config.mac.notarize=false` instead (the config's `build/icon.icon` needs `actool`).
 
 See the [documentation index](docs/README.md) for all guides, [development](docs/development.md) for setup and checks, [architecture](docs/architecture.md) for the runtime, [keyboard shortcuts](docs/keyboard.md), and [desktop builds and releases](docs/desktop-release.md).
 
-Questions, bug reports, and feature requests: [GitHub Issues](https://github.com/amosblomqvist/learnharness/issues).
-
 ## License
 
-[AGPL-3.0](LICENSE)
+[AGPL-3.0](LICENSE). Connla's changes carry the same licence as the upstream project they are built on.
 
-The app is free and open forever. If we ever charge for anything, it will be for convenience — managed keys, hosting — never for features you can run locally.
+The salmon plate is a public-domain 1904 illustration; the dither and the animation around it are part of this fork.
