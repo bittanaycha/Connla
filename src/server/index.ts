@@ -39,7 +39,8 @@ export { effectivePromptSegments, allSegmentPaths, readPromptOverride } from "..
 export * from "./keys.ts";
 export * from "./search.ts";
 export * from "./link-preview.ts";
-export * from "./forvo.ts";
+export * from "./library.ts";
+export * from "./edge-tts.ts";
 export { authStore } from "../store/auth.ts";
 export * from "./settings-body.ts";
 export { fileAccessConfigurationError } from "./file-access.ts";

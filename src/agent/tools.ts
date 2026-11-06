@@ -25,8 +25,9 @@ import { findTool } from "./tools/find.ts";
 import { grepTool } from "./tools/grep.ts";
 import { createShowImageTool } from "./tools/show-image.ts";
 import { createMapTool } from "./tools/map.ts";
+import { createAddReadingTool } from "./tools/reading.ts";
 import { healToolRecord } from "./tools/heal.ts";
-import type { GraphStore } from "../core/ports.ts";
+import type { GraphStore, LibraryStore } from "../core/ports.ts";
 
 export { jobTools };
 export type { ProbeDoneContext } from "./tools/probe.ts";
@@ -405,6 +406,10 @@ export interface TeacherToolContext extends PlanToolContext {
 	spawn: (job: JobRecord, input: ResearchInput | DemoInput | VisualInput | PdfInput) => void;
 	/** Retained search-status seam; research dispatch is available keylessly. */
 	searchAvailable?: () => boolean;
+	/** Add-only reading list (reading-list wave): the teacher writes, never reads.
+	 *  Optional so the many existing test contexts keep their narrow shapes;
+	 *  the production composition root always passes it. */
+	libraryStore?: Pick<LibraryStore, "listReading" | "addReading">;
 }
 
 /**
@@ -468,6 +473,10 @@ export function createTeacherTools(
 			// The deterministic map maker: teacher only, same instant
 			// discipline as show_image. No background authoring loop.
 			map: createMapTool(),
+			// Add-only reading list (reading-list wave, 2026-11-06): the
+			// learner can add by hand; the teacher may add one item at a time
+			// and is never shown the list.
+			add_reading: createAddReadingTool(ctx),
 			...planTools(ctx),
 			...jobTools({ chatId: ctx.chatId, jobStore: ctx.jobStore, spawn: ctx.spawn, searchAvailable: ctx.searchAvailable }),
 		},

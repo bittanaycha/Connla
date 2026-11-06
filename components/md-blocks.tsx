@@ -487,7 +487,7 @@ function pronounceLanguageFromHref(href: string): PronounceLanguage | null {
 	return isPronounceLanguage(normalized) ? normalized : null;
 }
 
-/** Link text without nested markup, for the spoken word and the Forvo link. */
+/** Link text without nested markup, for the spoken word. */
 function plainLinkText(children: ReactNode): string {
 	if (typeof children === "string" || typeof children === "number") return String(children);
 	if (Array.isArray(children)) return children.map(plainLinkText).join("");

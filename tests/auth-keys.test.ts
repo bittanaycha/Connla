@@ -15,7 +15,7 @@ describe("the catalog", () => {
 	it("lists the curated app-service keys (provider keys live in the provider table)", () => {
 		assert.deepEqual(
 			AUTH_KEYS.map((k) => k.id),
-			["DEEPGRAM_API_KEY", "TAVILY_API_KEY", "BRAVE_API_KEY", "EXA_API_KEY", "FIRECRAWL_API_KEY", "OLLAMA_API_KEY", "FORVO_API_KEY"],
+			["DEEPGRAM_API_KEY", "TAVILY_API_KEY", "BRAVE_API_KEY", "EXA_API_KEY", "FIRECRAWL_API_KEY", "OLLAMA_API_KEY"],
 		);
 		for (const k of AUTH_KEYS) {
 			assert.ok(k.label.length > 0, `${k.id} has a label`);
@@ -37,7 +37,6 @@ describe("the catalog", () => {
 		assert.ok(isKnownAuthKey("EXA_API_KEY"));
 		assert.ok(isKnownAuthKey("FIRECRAWL_API_KEY"));
 		assert.ok(isKnownAuthKey("OLLAMA_API_KEY"));
-		assert.ok(isKnownAuthKey("FORVO_API_KEY"));
 		assert.ok(!isKnownAuthKey("OPENROUTER_API_KEY"));
 		assert.ok(!isKnownAuthKey("OPENAI_API_KEY"), "provider vars are a separate surface");
 		assert.ok(!isKnownAuthKey("FUTURE_PLANS_TOKEN"));
@@ -84,12 +83,6 @@ describe("validateKeyShape (the 400 gate — curated keys)", () => {
 		assert.ok(!validateKeyShape("OLLAMA_API_KEY", "short").ok);
 		assert.ok(!validateKeyShape("OLLAMA_API_KEY", "ollama fake key 123456").ok);
 		assert.ok(!isKnownAuthKey("OLLAMA_BASE_URL"));
-	});
-
-	it("Forvo: plain key, length floor only", () => {
-		assert.ok(validateKeyShape("FORVO_API_KEY", "0123456789abcdef").ok);
-		assert.ok(!validateKeyShape("FORVO_API_KEY", "short").ok);
-		assert.ok(!validateKeyShape("FORVO_API_KEY", "forvo key 123456").ok);
 	});
 
 	it("trims surrounding paste whitespace before checking", () => {

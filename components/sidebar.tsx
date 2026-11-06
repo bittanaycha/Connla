@@ -6,11 +6,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { MenuShell } from "@/components/menu-shell";
 import { DeleteSessionDialog } from "@/components/delete-session-dialog";
 import type { ChatDeleteMode } from "@/src/core";
-import { DumbbellIcon, FishIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon } from "lucide-react";
+import { BookMarkedIcon, DumbbellIcon, FishIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon } from "lucide-react";
 import { ActivitySection } from "@/components/activity-dock";
 import { CoverageMenuBlock } from "@/components/extraction-coverage";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BrailleSpinner } from "@/components/braille-spinner";
+import { SelectionActions } from "@/components/selection-actions";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { SettingsDialogProvider, useSettingsDialog } from "@/components/settings/settings-dialog.tsx";
 import { Hint } from "@/components/ui/hint";
@@ -82,6 +83,8 @@ declare global {
 			checkForUpdates?: () => Promise<void>;
 			installUpdate?: () => void;
 			onOpenSettings?: (cb: (section: string) => void) => () => void;
+			/** The Forvo fallback (pronunciation wave): a 420×560 child window. */
+			openForvoWindow?: (url: string) => Promise<void>;
 		};
 	}
 }
@@ -849,10 +852,21 @@ function SessionsSidebar() {
 					    learner opted out (no ambient signal, user decision). */}
 					<ActivitySection />
 
-					{/* Settings entry (settings-app wave): same row language as
-					    New session — quiet, bottom-pinned, opens the centered
-					    dialog (also mod+, in the keyboard registry). */}
-					<div className="px-3 pb-3 pt-1">
+					{/* Library + Settings entries: same row language as New session —
+					    quiet, bottom-pinned. The Library link replaces the old
+					    glossary/highlight surfaces (library wave); Settings opens
+					    the centered dialog (also mod+, in the keyboard registry). */}
+					<div className="flex flex-col gap-0.5 px-3 pb-3 pt-1">
+						<Hint label="Library" side="right">
+							<Link
+								href="/library"
+								data-testid="library-entry"
+								className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-ui uppercase tracking-wider text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+							>
+								<BookMarkedIcon className="size-3" />
+								Library
+							</Link>
+						</Hint>
 						<Hint label="Settings" action="open-settings" side="right">
 							<button
 								type="button"
@@ -951,6 +965,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 		<SettingsDialogProvider>
 			<SessionsSidebar />
 			<FilePathDropZone className="relative min-w-0 flex-1">{children}</FilePathDropZone>
+			{/* One selection popup for the whole shell (library wave): it only
+			    reacts to selections inside [data-highlightable], so the graph,
+			    settings, and sidebar are untouched. */}
+			<SelectionActions />
 			{/* The single document-level keydown listener (keyboard wave A) —
 			    after the content in the tree, but it's window-level so order only
 			    matters for the events it dispatches, never for DOM priority. */}

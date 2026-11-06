@@ -28,6 +28,16 @@ import type {
 	NotesSource,
 } from "./contracts.ts";
 import type { UserSettings } from "./settings.ts";
+import type {
+	GlossaryEntry,
+	GlossaryPatch,
+	HighlightEntry,
+	NewGlossaryEntry,
+	NewHighlightEntry,
+	NewReadingEntry,
+	ReadingItem,
+	ReadingPatch,
+} from "./library.ts";
 
 // ─── ChatStore — the session record's home (data/chats) ─────────────────────
 
@@ -231,5 +241,34 @@ export interface AuthStore {
 	setAuthVar(name: string, value: string): void;
 	/** Remove one VAR if present (absent = no-op, still a silent success). */
 	deleteAuthVar(name: string): void;
+}
+
+// ─── LibraryStore — glossary, highlights, reading list (library wave) ───────
+
+/**
+ * Three small record lists at the data-dir seam (config.GLOSSARY_FILE /
+ * HIGHLIGHTS_FILE / READING_LIST_FILE). Read-modify-write, not ledgers:
+ * edits and deletes are first-class. Reads are defensive (absent file = [],
+ * a corrupt line is skipped); writes are atomic and preserve the other
+ * entries. Ids are created by the adapter (`gla_`/`hl_`/`rd_` + nanoid).
+ *
+ * Dedupe policy lives with the callers (the routes) so they can answer 200
+ * with the existing record instead of writing a second one.
+ */
+export interface LibraryStore {
+	listGlossary(): GlossaryEntry[];
+	findGlossary(term: string, language: string): GlossaryEntry | null;
+	addGlossary(entry: NewGlossaryEntry): GlossaryEntry;
+	updateGlossary(id: string, patch: GlossaryPatch): GlossaryEntry | null;
+	deleteGlossary(id: string): boolean;
+
+	listHighlights(): HighlightEntry[];
+	addHighlight(entry: NewHighlightEntry): HighlightEntry;
+	deleteHighlight(id: string): boolean;
+
+	listReading(): ReadingItem[];
+	addReading(entry: NewReadingEntry): ReadingItem;
+	updateReading(id: string, patch: ReadingPatch): ReadingItem | null;
+	deleteReading(id: string): boolean;
 }
 

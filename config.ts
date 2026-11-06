@@ -114,6 +114,22 @@ export const GRAPH_FORMAT_FILE = path.join(PATHS.graph, "format.json");
 export const SETTINGS_FILE = path.join(DATA_ROOT, "settings.json");
 
 /**
+ * LIBRARY RECORDS (library wave): three small JSONL files at the data-dir
+ * seam, read-modify-write like the chat files — NOT append-only ledgers,
+ * because edits and deletes are first-class. One record per line, one list
+ * per file (src/store/library.ts owns the adapter).
+ *   glossary.jsonl  GlossaryEntry  — term + generated definition
+ *   highlights.jsonl HighlightEntry — a saved quote + its source
+ *   reading.jsonl   ReadingItem    — the handwritten/teacher-added list
+ */
+export const GLOSSARY_FILE = path.join(DATA_ROOT, "glossary.jsonl");
+export const HIGHLIGHTS_FILE = path.join(DATA_ROOT, "highlights.jsonl");
+export const READING_LIST_FILE = path.join(DATA_ROOT, "reading.jsonl");
+
+/** Edge TTS mp3 cache — derived, deletable, keyed by language+text digest. */
+export const TTS_CACHE_DIR = path.join(DATA_ROOT, "cache", "tts");
+
+/**
  * User prompt-override files (settings-storage wave, 2026-09-19): the
  * per-segment system-prompt overrides mirroring the SOURCE layout
  * (src/agent/prompts/) — the shared base as prompts/system-prompt.md,

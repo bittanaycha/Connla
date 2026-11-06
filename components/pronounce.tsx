@@ -1,33 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2Icon, Volume2Icon, VolumeXIcon } from "lucide-react";
+import { ExternalLinkIcon, Loader2Icon, Volume2Icon, VolumeXIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchEdgeAudio, releaseEdgeAudio, type EdgeAudioHandle } from "@/lib/edge-audio";
+import { openForvoWindow } from "@/lib/forvo-popup";
 import {
 	forvoSearchUrl,
+	hasEdgeVoice,
 	PRONOUNCE_BCP47,
 	PRONOUNCE_LANGUAGE_NAMES,
 	type PronounceLanguage,
 } from "@/src/core";
-
-interface PronunciationResponse {
-	audio: string;
-	mimeType?: string;
-	speaker?: string;
-	forvoUrl?: string;
-}
-
-interface CachedAudio {
-	value: PronunciationResponse;
-	expires: number;
-}
-
-const AUDIO_CACHE_MS = 30 * 60 * 1000;
-const audioCache = new Map<string, CachedAudio>();
-
-function cacheKey(language: string, word: string): string {
-	return `${language}:${word}`;
-}
 
 function speakableVoice(voices: SpeechSynthesisVoice[], language: PronounceLanguage): SpeechSynthesisVoice | null {
 	const target = PRONOUNCE_BCP47[language].toLowerCase();
@@ -37,43 +21,12 @@ function speakableVoice(voices: SpeechSynthesisVoice[], language: PronounceLangu
 	return voices.find((voice) => voice.lang.replace(/_/g, "-").toLowerCase().split("-")[0] === base) ?? null;
 }
 
-async function fetchPronunciation(
-	language: PronounceLanguage,
-	word: string,
-	signal: AbortSignal,
-): Promise<PronunciationResponse | null> {
-	try {
-		const response = await fetch(
-			`/api/pronounce?lang=${encodeURIComponent(language)}&word=${encodeURIComponent(word)}`,
-			{ cache: "no-store", signal },
-		);
-		if (!response.ok) return null;
-		const data = (await response.json()) as Partial<PronunciationResponse>;
-		if (typeof data.audio !== "string" || !data.audio) return null;
-		return {
-			audio: data.audio,
-			mimeType: typeof data.mimeType === "string" ? data.mimeType : "audio/mpeg",
-			...(typeof data.speaker === "string" ? { speaker: data.speaker } : {}),
-			...(typeof data.forvoUrl === "string" ? { forvoUrl: data.forvoUrl } : {}),
-		};
-	} catch {
-		return null;
-	}
-}
-
-function playAudio(
-	data: PronunciationResponse,
-	audioRef: { current: HTMLAudioElement | null },
-	onEnded: () => void,
-	onFailed: () => void,
-): void {
-	const audio = new Audio(`data:${data.mimeType ?? "audio/mpeg"};base64,${data.audio}`);
-	audioRef.current = audio;
-	audio.onended = onEnded;
-	audio.onerror = onFailed;
-	void audio.play().catch(onFailed);
-}
-
+/**
+ * A spoken word inside prose. Click the speaker: Edge TTS first (the free
+ * Read Aloud endpoint), then the OS voice when the browser has one, then a
+ * small card offering the Forvo recordings in a 420×560 window. No inline
+ * Forvo link — the card is the only way out, on purpose.
+ */
 export function PronounceWord({
 	word,
 	lang,
@@ -84,12 +37,14 @@ export function PronounceWord({
 	className?: string;
 }) {
 	const [state, setState] = useState<"idle" | "loading" | "playing" | "error">("idle");
+	const [fallbackOpen, setFallbackOpen] = useState(false);
 	const [message, setMessage] = useState<string | null>(null);
-	const audioRef = useRef<HTMLAudioElement | null>(null);
+	const audioRef = useRef<EdgeAudioHandle | null>(null);
 	const speakingRef = useRef(false);
 	const abortRef = useRef<AbortController | null>(null);
 	const aliveRef = useRef(true);
 	const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+	const wrapRef = useRef<HTMLSpanElement | null>(null);
 
 	useEffect(() => {
 		if (!("speechSynthesis" in window)) return;
@@ -107,7 +62,7 @@ export function PronounceWord({
 		return () => {
 			aliveRef.current = false;
 			abortRef.current?.abort();
-			audioRef.current?.pause();
+			releaseEdgeAudio(audioRef.current);
 			audioRef.current = null;
 			if (speakingRef.current) {
 				window.speechSynthesis?.cancel();
@@ -116,15 +71,27 @@ export function PronounceWord({
 		};
 	}, []);
 
+	useEffect(() => {
+		if (!fallbackOpen) return;
+		const onPointerDown = (event: PointerEvent) => {
+			if (!wrapRef.current?.contains(event.target as Node)) setFallbackOpen(false);
+		};
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") setFallbackOpen(false);
+		};
+		document.addEventListener("pointerdown", onPointerDown);
+		document.addEventListener("keydown", onKeyDown);
+		return () => {
+			document.removeEventListener("pointerdown", onPointerDown);
+			document.removeEventListener("keydown", onKeyDown);
+		};
+	}, [fallbackOpen]);
+
 	const stop = () => {
 		abortRef.current?.abort();
 		abortRef.current = null;
-		const audio = audioRef.current;
-		if (audio) {
-			audio.pause();
-			audio.currentTime = 0;
-			audioRef.current = null;
-		}
+		releaseEdgeAudio(audioRef.current);
+		audioRef.current = null;
 		if (speakingRef.current) {
 			window.speechSynthesis?.cancel();
 			speakingRef.current = false;
@@ -160,69 +127,74 @@ export function PronounceWord({
 		return true;
 	};
 
+	const showFallback = () => {
+		releaseEdgeAudio(audioRef.current);
+		audioRef.current = null;
+		if (speakSystem()) return;
+		setFallbackOpen(true);
+		setState("error");
+	};
+
+	const playEdge = (handle: EdgeAudioHandle) => {
+		audioRef.current = handle;
+		handle.audio.onended = () => {
+			releaseEdgeAudio(handle);
+			if (audioRef.current === handle) audioRef.current = null;
+			if (aliveRef.current) setState("idle");
+		};
+		handle.audio.onerror = () => {
+			if (!aliveRef.current) return;
+			showFallback();
+		};
+		setState("playing");
+		void handle.audio.play().catch(() => {
+			if (aliveRef.current) showFallback();
+		});
+	};
+
 	const onClick = async () => {
 		if (state === "loading" || state === "playing") {
 			stop();
 			return;
 		}
 		setMessage(null);
+		setFallbackOpen(false);
 		abortRef.current?.abort();
 		const controller = new AbortController();
 		abortRef.current = controller;
 		setState("loading");
 
-		const playbackFailed = () => {
-			if (!aliveRef.current) return;
-			if (speakSystem()) return;
-			setMessage("The recording could not play.");
-			setState("error");
-		};
-
-		const key = cacheKey(lang, word);
-		const cached = audioCache.get(key);
-		if (cached && cached.expires > Date.now()) {
-			setState("playing");
-			playAudio(
-				cached.value,
-				audioRef,
-				() => aliveRef.current && setState("idle"),
-				playbackFailed,
-			);
+		const handle = await fetchEdgeAudio(word, lang, controller.signal);
+		if (!aliveRef.current || controller.signal.aborted) {
+			releaseEdgeAudio(handle);
 			return;
 		}
-
-		const data = await fetchPronunciation(lang, word, controller.signal);
-		if (controller.signal.aborted || !aliveRef.current) return;
-		if (data) {
-			audioCache.set(key, { value: data, expires: Date.now() + AUDIO_CACHE_MS });
-			setState("playing");
-			playAudio(
-				data,
-				audioRef,
-				() => aliveRef.current && setState("idle"),
-				playbackFailed,
-			);
+		if (handle) {
+			playEdge(handle);
 			return;
 		}
+		showFallback();
+	};
 
-		// No Forvo key, no recording, or Forvo unreachable: use the OS voice.
-		if (speakSystem()) return;
-
-		// No OS voice for this language: the free Forvo search is the path.
-		window.open(forvoSearchUrl(word, lang), "_blank", "noopener,noreferrer");
-		setState("idle");
+	const openForvo = () => {
+		setFallbackOpen(false);
+		openForvoWindow(forvoSearchUrl(word, lang));
 	};
 
 	const languageName = PRONOUNCE_LANGUAGE_NAMES[lang];
 	const label =
-		state === "error"
-			? (message ?? "Pronunciation unavailable")
+		state === "loading"
+			? `Loading pronunciation of ${word}`
 			: state === "playing"
 				? `Stop pronunciation of ${word}`
 				: `Hear ${word} in ${languageName}`;
 
 	return (
-		<span className={cn("inline-flex items-baseline gap-0.5 whitespace-nowrap align-baseline", className)}>
+		<span
+			ref={wrapRef}
+			data-pronounce-lang={lang}
+			className={cn("relative inline-flex items-baseline gap-0.5 whitespace-nowrap align-baseline", className)}
+		>
 			<span>{word}</span>
 			<button
 				type="button"
@@ -242,16 +214,26 @@ export function PronounceWord({
 					<Volume2Icon className={cn("size-3", state === "playing" && "animate-pulse")} />
 				)}
 			</button>
-			<a
-				href={forvoSearchUrl(word, lang)}
-				target="_blank"
-				rel="noopener noreferrer"
-				aria-label={`Search ${word} on Forvo (opens in a new tab)`}
-				title="Search this word on Forvo"
-				className="text-[9px] font-medium uppercase tracking-[0.08em] text-muted-foreground/55 transition-colors hover:text-foreground"
-			>
-				Forvo
-			</a>
+			{fallbackOpen ? (
+				<span
+					role="dialog"
+					aria-label={`Forvo recordings of ${word}`}
+					className="absolute left-0 top-full z-50 mt-1 flex w-60 flex-col gap-1.5 rounded-md border border-border bg-popover p-2.5 text-left text-popover-foreground shadow-lg"
+				>
+					<span className="text-[11px] leading-snug text-muted-foreground">
+						{message ??
+							(hasEdgeVoice(lang) ? "Edge audio is unavailable right now." : `Edge has no ${languageName} voice.`)}
+					</span>
+					<button
+						type="button"
+						onClick={openForvo}
+						className="inline-flex items-center gap-1 self-start rounded-sm bg-accent px-2 py-1 text-[11px] font-medium text-accent-foreground transition-colors hover:bg-accent/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					>
+						<ExternalLinkIcon className="size-3" />
+						Play on Forvo
+					</button>
+				</span>
+			) : null}
 		</span>
 	);
 }

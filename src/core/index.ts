@@ -17,6 +17,10 @@
 
 export * from "./contracts.ts";
 export * from "./pronounce.ts";
+// library.ts (library wave): record shapes, limits, and the strict-JSON
+// definition parser — pure and browser-safe; the shell's popup/library
+// view import their types and caps from here.
+export * from "./library.ts";
 export { embedLearnerImage } from "./learner-image-svg.ts";
 export * from "./ports.ts";
 export * from "./chains.ts";

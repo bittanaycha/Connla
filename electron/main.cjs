@@ -745,6 +745,62 @@ async function main() {
 		BrowserWindow, dialog, trustedAppWindows, origin: new URL(url).origin,
 	}));
 
+	// The Forvo fallback (pronunciation wave): the app's own link opens a
+	// small child window instead of a tab. The renderer sends one address;
+	// this handler validates the host and keeps the child on forvo.com.
+	ipcMain.handle("lh:forvo:open", async (event, target) => {
+		const parent = BrowserWindow.fromWebContents(event.sender);
+		if (!parent || !trustedAppWindows.has(parent) || !trustedSender(event, new URL(url).origin, BrowserWindow)) {
+			throw new Error("Untrusted desktop request.");
+		}
+		if (!isForvoUrl(target)) throw new Error("Only forvo.com may open here.");
+		const child = new BrowserWindow({
+			width: 420,
+			height: 560,
+			parent,
+			show: false,
+			title: "Forvo",
+			backgroundColor: "#141414",
+			webPreferences: {
+				sandbox: true,
+				contextIsolation: true,
+				nodeIntegration: false,
+				// Keep the Forvo session between opens; no other origin shares it.
+				partition: "persist:forvo",
+			},
+		});
+		child.setMenuBarVisibility(false);
+		const openElsewhere = (next) => {
+			if (isForvoUrl(next)) return false;
+			void shell.openExternal(next);
+			return true;
+		};
+		child.webContents.setWindowOpenHandler(({ url: next }) => {
+			return openElsewhere(next) ? { action: "deny" } : { action: "allow" };
+		});
+		child.webContents.on("will-navigate", (navigationEvent, next) => {
+			if (openElsewhere(next)) navigationEvent.preventDefault();
+		});
+		child.once("ready-to-show", () => child.show());
+		try {
+			await child.loadURL(target);
+		} catch {
+			child.destroy();
+			throw new Error("Forvo could not load.");
+		}
+		return child.id;
+	});
+
+	function isForvoUrl(target) {
+		try {
+			const parsed = new URL(String(target));
+			const host = parsed.hostname.toLowerCase();
+			return parsed.protocol === "https:" && (host === "forvo.com" || host.endsWith(".forvo.com"));
+		} catch {
+			return false;
+		}
+	}
+
 	installMenu();
 
 	// Auto-update (Wave C): wire the updater before the window so the

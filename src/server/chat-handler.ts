@@ -498,6 +498,9 @@ export async function handleChatInput(
 						chatId,
 						chatStore: stores.chatStore,
 						jobStore: stores.jobStore,
+						// Add-only reading list (reading-list wave): the teacher
+						// may write one item, never read the list back.
+						libraryStore: stores.libraryStore,
 						spawn: (job, input) => void jobRunner.runJob(job.id, input),
 						// The registry drop's signal (2026-09-20): no live engine
 						// = no research tool in the teacher's registry.

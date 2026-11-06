@@ -78,6 +78,9 @@ contextBridge.exposeInMainWorld("lh", {
 		},
 	},
 	expandWindow: () => ipcRenderer.send("lh:expand-window"),
+	// The Forvo fallback (pronunciation wave): main validates the URL and
+	// opens a 420×560 child window; browser builds use lib/forvo-popup.ts.
+	openForvoWindow: (target) => ipcRenderer.invoke("lh:forvo:open", target),
 	onZoom: (cb) => {
 		const listener = (_event, factor) => cb(factor);
 		ipcRenderer.on("lh:zoom", listener);

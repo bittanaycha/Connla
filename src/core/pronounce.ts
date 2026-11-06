@@ -1,5 +1,5 @@
 /**
- * The ten languages the pronunciation button knows. Shared by the server
+ * The ten languages the pronunciation button knows. Shared by the TTS
  * route, the Markdown renderer, and the Forvo search link.
  *
  * The code is what the teacher writes in `[word](/pronounce/{code})`; the
@@ -42,6 +42,29 @@ export const PRONOUNCE_LANGUAGE_NAMES: Record<PronounceLanguage, string> = {
 	ga: "Irish",
 	gd: "Scottish Gaelic",
 };
+
+/**
+ * Edge Read Aloud voices, one per known language. `null` means Edge has no
+ * voice for it: Scottish Gaelic is the gap, so the UI falls back to the OS
+ * voice, then to the Forvo card. (Edge has cy-GB and ga-IE; it has never
+ * shipped a gd-GB voice.)
+ */
+export const EDGE_VOICES: Record<PronounceLanguage, string | null> = {
+	en: "en-GB-SoniaNeural",
+	fr: "fr-FR-DeniseNeural",
+	ja: "ja-JP-NanamiNeural",
+	cy: "cy-GB-NiaNeural",
+	it: "it-IT-ElsaNeural",
+	es: "es-ES-ElviraNeural",
+	pt: "pt-PT-FernandaNeural",
+	zh: "zh-CN-XiaoxiaoNeural",
+	ga: "ga-IE-OrlaNeural",
+	gd: null,
+};
+
+export function hasEdgeVoice(language: PronounceLanguage): boolean {
+	return EDGE_VOICES[language] !== null;
+}
 
 const FORVO_SEARCH_LANGUAGE: Record<PronounceLanguage, string> = {
 	en: "en",
