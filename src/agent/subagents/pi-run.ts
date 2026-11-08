@@ -41,6 +41,13 @@ export interface SubagentRunOptions {
 	onAssistantMessage?: (message: AssistantMessage, step: number) => void;
 	/** Extra stop rule (extractor: stop after a clean submit). */
 	shouldStop?: (message: AssistantMessage, toolResults: ToolResultMessage[]) => boolean;
+	/** The landing guarantee (researcher, 2026-11-08): when the run stops on
+	 *  a tool round — the call cap landed before the deliverable — spend ONE
+	 *  more model call with the tools removed, prompted by this message, so
+	 *  the work already done ends in writing instead of being thrown away.
+	 *  A run that stops on a text answer gets no extra call. Absent → the
+	 *  old behavior (no extra call). */
+	finalInstruction?: string;
 	/** Debug: when set AND LH_PROVIDER_EVENTS=1, raw provider stream
 	 *  events append to data/debug/provider-events/<chatId>.jsonl (context
 	 *  "job:<role>"). Absent or env-off → no observer.
@@ -53,6 +60,31 @@ export interface SubagentRunResult {
 	newMessages: AgentMessage[];
 	/** The final assistant text (the deliverable). */
 	text: string;
+	/** True when the call cap ended the loop. With `finalInstruction` the
+	 *  cap is followed by one tool-less brief call, so this stays true even
+	 *  when that call produced the deliverable. */
+	hitTurnCap: boolean;
+}
+
+/** The last assistant message in a transcript slice, if any. */
+function lastAssistant(messages: AgentMessage[]): AssistantMessage | undefined {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		if ((messages[i] as { role?: string }).role === "assistant") return messages[i] as AssistantMessage;
+	}
+	return undefined;
+}
+
+/** The deliverable: the LAST assistant message's text blocks. A tool-calling
+ *  turn carries no text (reasoning models emit thinking + toolCall), so an
+ *  empty result means the run stopped before writing anything. */
+function assistantText(messages: AgentMessage[]): string {
+	const last = lastAssistant(messages);
+	return last
+		? last.content
+				.filter((c): c is { type: "text"; text: string } => c.type === "text")
+				.map((c) => c.text)
+				.join("")
+		: "";
 }
 
 export function subagentEngine(role: ModelRole, override?: PiEngine): PiEngine {
@@ -65,6 +97,7 @@ export function subagentEngine(role: ModelRole, override?: PiEngine): PiEngine {
 export async function runSubagent(tools: AgentTool<any, any>[], opts: SubagentRunOptions): Promise<SubagentRunResult> {
 	const engine = subagentEngine(opts.role, opts.engine);
 	let turns = 0;
+	let hitTurnCap = false;
 	// Debug recorder (owner, 2026-10-04): raw provider events per job run.
 	const providerEvents = opts.chatId ? providerEventObserver(opts.chatId, `job:${opts.role}`) : undefined;
 	const sessionId = randomUUID();
@@ -86,7 +119,11 @@ export async function runSubagent(tools: AgentTool<any, any>[], opts: SubagentRu
 		// exits before the steering poll, exactly the old boolean-true).
 		finishTurn: (turn) => {
 			turns++;
-			return turns >= opts.maxTurns || opts.shouldStop?.(turn.message, turn.toolResults) === true
+			if (turns >= opts.maxTurns) {
+				hitTurnCap = true;
+				return { action: "end" };
+			}
+			return opts.shouldStop?.(turn.message, turn.toolResults) === true
 				? { action: "end" }
 				: undefined;
 		},
@@ -96,6 +133,12 @@ export async function runSubagent(tools: AgentTool<any, any>[], opts: SubagentRu
 	opts.abortSignal?.addEventListener("abort", onAbort, { once: true });
 
 	const before = opts.messages?.length ?? 0;
+	// Drop the seeded leading SystemMessage (transcript rework — see
+	// ui-stream's settleWith) before slicing past the input count, or the
+	// seed displaces the slice and the last INPUT message leaks in.
+	const since = () => agent.state.messages
+		.filter((m) => (m as { role?: string }).role !== "system")
+		.slice(before);
 	let step = 0;
 	let errorMessage: string | undefined;
 	let aborted = false;
@@ -134,6 +177,22 @@ export async function runSubagent(tools: AgentTool<any, any>[], opts: SubagentRu
 			timestamp: Date.now(),
 		});
 		else await agent.continue();
+		// The landing guarantee: a run that stopped on a tool round gets ONE
+		// more request with the tools removed, so the model has nothing to do
+		// but write what it already gathered. A run that stopped on a plain
+		// text answer already landed and is left alone.
+		if (opts.finalInstruction) {
+			const last = lastAssistant(since());
+			const endedMidWork = last?.content.some((c) => c.type === "toolCall") ?? false;
+			if (endedMidWork) {
+				agent.state.tools = [];
+				await agent.prompt({
+					role: "user",
+					content: opts.finalInstruction,
+					timestamp: Date.now(),
+				});
+			}
+		}
 	} catch (error) {
 		runFailure = error;
 		throw error;
@@ -150,19 +209,6 @@ export async function runSubagent(tools: AgentTool<any, any>[], opts: SubagentRu
 	}
 	if (errorMessage !== undefined) throw new Error(errorMessage);
 
-	// 0.87.1: drop the seeded leading SystemMessage (transcript rework —
-	// see ui-stream's settleWith) before slicing past the input count, or
-	// the seed displaces the slice and the last INPUT message leaks in.
-	const newMessages = agent.state.messages
-		.filter((m) => (m as { role?: string }).role !== "system")
-		.slice(before);
-	const assistants = newMessages.filter((m) => (m as { role?: string }).role === "assistant") as AssistantMessage[];
-	const last = assistants[assistants.length - 1];
-	const text = last
-		? last.content
-				.filter((c): c is { type: "text"; text: string } => c.type === "text")
-				.map((c) => c.text)
-				.join("")
-		: "";
-	return { newMessages, text };
+	const newMessages = since();
+	return { newMessages, text: assistantText(newMessages), hitTurnCap };
 }

@@ -16,6 +16,13 @@ import { runSubagent } from "./pi-run.ts";
  * The engine is injectable so tests run the loop with a scripted faux engine.
  */
 
+/**
+ * Model calls per research run. Parity with the demo builder (24) — the
+ * researcher's old 12 was the lowest budget in the codebase and every
+ * failing job hit exactly it (all 5 live failures, 2026-11-08).
+ */
+export const RESEARCH_TURN_BUDGET = 24;
+
 const INSTRUCTIONS = `You are a research specialist. You work for a teacher agent inside a learning
 application: given a research question, conduct thorough web research and produce a focused,
 well-sourced brief that the teacher can teach from.
@@ -38,6 +45,11 @@ Process:
    pdf_extract — for long ones, pdf_search first and extract only the pages that hit.
    Cite claims from a PDF as (p. N).
 6. Synthesize everything into a brief that directly answers the question.
+
+Budget: you have at most ${RESEARCH_TURN_BUDGET} model calls in this run, and every search, fetch,
+or PDF read spends one. Plan for the brief from the start: as you approach the end of the
+budget, stop investigating and write. A complete brief from partial research is the goal;
+an unfinished investigation is not.
 
 Evaluation — what to keep vs drop:
 - Official docs and primary sources outweigh blog posts and forum threads.
@@ -94,17 +106,30 @@ export interface ResearcherRunOptions {
 export async function runResearcherAgent(prompt: string, opts: ResearcherRunOptions = {}): Promise<string> {
 	const tools = Object.values(createWebTools(opts.search ?? (() => null)));
 	if (opts.pdfDir) tools.push(...Object.values(createPdfReadTools(opts.pdfDir)));
-	const { text } = await runSubagent(tools, {
+	const { text, hitTurnCap } = await runSubagent(tools, {
 		role: "researcher",
 		prompt,
 		engine: opts.engine,
 		systemPrompt: INSTRUCTIONS,
-		maxTurns: 12,
+		maxTurns: RESEARCH_TURN_BUDGET,
+		// The landing guarantee: if the budget runs out mid-investigation, the
+		// run gets one tool-less call to write the brief from what it has,
+		// instead of discarding the research (the live 2026-11-08 failures).
+		finalInstruction:
+			"Your research budget is spent. Write your final brief now, in the required format, " +
+			"from the sources and notes already in this conversation. Do not call any tools.",
 		abortSignal: opts.abortSignal,
 		onUsage: opts.onUsage,
 		onToolStart: opts.onToolStart,
 		chatId: opts.chatId,
 	});
+	if (!text.trim()) {
+		throw new Error(
+			hitTurnCap
+				? `the researcher used all ${RESEARCH_TURN_BUDGET} model calls without writing a brief`
+				: "the researcher produced no text",
+		);
+	}
 	return text;
 }
 
