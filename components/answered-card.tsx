@@ -62,6 +62,7 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 		<div
 			className="rounded-xl border bg-card p-4 text-card-foreground [&>*:last-child]:mb-0"
 			data-testid="answered-card"
+			data-highlightable
 		>
 			<div className="mb-1 flex items-center gap-2 text-xs font-medium font-ui uppercase tracking-wide text-muted-foreground">
 				{/* The tool's OWN name first (owner 2026-10-09): probe-phase

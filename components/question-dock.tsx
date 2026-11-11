@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownIcon, ChevronRightIcon, PlayIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { finishDictation, isDictationActive, joinDictation, useDictationTarget } from "@/components/dictation";
+import { useDragGuard } from "@/components/click-guard";
 import { useEnterSubmits } from "@/components/enter-submits";
 import { PathInput } from "@/components/path-input";
 import { MalformedQuestion } from "@/components/malformed-question";
@@ -63,6 +64,9 @@ import { CONFIDENCE_COLORS, confidenceRailStyle } from "@/components/confidence-
 export interface QuestionDockProps {
 	toolName: "quiz" | "probe" | "ask_user_question" | "explain" | "recall";
 	toolCallId: string;
+	/** The assistant message carrying this call — the selection popup's
+	 *  backlink anchor for glossary/highlight saves from the dock. */
+	messageId?: string;
 	input: QuizToolInput | AskToolInput | ExplainToolInput;
 	/** Collapse state, owned by the DockOverlay (it drives the shell's height morph). */
 	expanded: boolean;
@@ -102,6 +106,7 @@ export interface QuestionDockProps {
 export function QuestionDock({
 	toolName,
 	toolCallId,
+	messageId,
 	input,
 	expanded,
 	reveal = false,
@@ -156,6 +161,7 @@ export function QuestionDock({
 				<QuestionDockForm
 					toolName={toolName}
 					toolCallId={toolCallId}
+					messageId={messageId}
 					input={parsed}
 					phase={phase}
 					active={expanded}
@@ -253,6 +259,7 @@ export function QuestionDockBar({
 function QuestionDockForm({
 	toolName,
 	toolCallId,
+	messageId,
 	input,
 	phase = "probe",
 	active,
@@ -264,6 +271,9 @@ function QuestionDockForm({
 	compactionRunning = false,
 }: Omit<QuestionDockProps, "expanded" | "onExpand" | "reveal">) {
 	const kind = toolQuestionKind(toolName);
+	// Option rows are buttons AND prose: a drag that selects their words
+	// must not answer the question (selection popup coverage).
+	const dragGuard = useDragGuard();
 
 	// Canonical QuestionData, built once per question. Quiz options are
 	// deterministically shuffled (seeded by toolCallId) so position never leaks
@@ -558,11 +568,11 @@ function QuestionDockForm({
 	}, [kbdIdx]);
 
 	return (
-		<div ref={rootRef} data-testid="question-dock">
+		<div ref={rootRef} data-testid="question-dock" data-source-message-id={messageId}>
 			{/* Question area — scrolls internally if very tall; the bottom row stays put.
 			    Capped by the measured column (--dock-max-h; the old fixed 55dvh cut
 			    long questions short — owner round, 2026-10-05). */}
-			<div data-dock-scroll-area="" data-session-find-root="" className="max-h-[var(--dock-max-h,55dvh)] overflow-y-auto px-4 pt-3">
+			<div data-dock-scroll-area="" data-session-find-root="" data-highlightable className="max-h-[var(--dock-max-h,55dvh)] overflow-y-auto px-4 pt-3">
 				<div className="mb-1 text-xs font-medium font-ui uppercase tracking-wide text-muted-foreground">
 					{toolName === "probe"
 						? "Probe"
@@ -597,9 +607,13 @@ function QuestionDockForm({
 									role={qd.mode === "multi-select" ? "checkbox" : "radio"}
 									aria-checked={isSel}
 									data-kbdrow={i}
-									onClick={() => toggle(i)}
+									onPointerDown={dragGuard.onPointerDown}
+									onPointerCancel={dragGuard.onPointerCancel}
+									onClick={(event) => {
+										if (dragGuard.allowClick(event)) toggle(i);
+									}}
 									className={cn(
-										"flex items-start gap-3 rounded-lg border px-3 py-2 text-left text-sm outline-none transition-colors",
+										"flex select-text items-start gap-3 rounded-lg border px-3 py-2 text-left text-sm outline-none transition-colors",
 										isSel ? "border-primary bg-accent" : "hover:bg-accent/50",
 										i === kbdIdx && !isSel && "ring-1 ring-border bg-accent/40",
 									)}
@@ -639,15 +653,18 @@ function QuestionDockForm({
 						{kind === "quiz" && (
 							<button
 								type="button"
-								onClick={() =>
-									setSel((prev) => ({ ...prev, selected: new Set(), otherSelected: false, dontKnow: !prev.dontKnow }))
-								}
+								onPointerDown={dragGuard.onPointerDown}
+								onPointerCancel={dragGuard.onPointerCancel}
+								onClick={(event) => {
+									if (!dragGuard.allowClick(event)) return;
+									setSel((prev) => ({ ...prev, selected: new Set(), otherSelected: false, dontKnow: !prev.dontKnow }));
+								}}
 								data-kbdrow={optionCount}
 								aria-pressed={sel.dontKnow}
 								className={cn(
 									// Option-row layout + radio circle (owner); the dashed
 									// outline stays — this is the deliberate non-answer.
-									"flex items-start gap-3 rounded-lg border border-dashed px-3 py-2 text-left text-sm outline-none transition-colors",
+									"flex select-text items-start gap-3 rounded-lg border border-dashed px-3 py-2 text-left text-sm outline-none transition-colors",
 									sel.dontKnow ? "border-primary text-foreground" : "text-muted-foreground",
 									kbdIdx === optionCount && !sel.dontKnow && "ring-1 ring-border bg-accent/40",
 								)}
@@ -672,9 +689,13 @@ function QuestionDockForm({
 								aria-checked={sel.otherSelected}
 								data-testid="other-option"
 								data-kbdrow={optionCount}
-								onClick={selectOther}
+								onPointerDown={dragGuard.onPointerDown}
+								onPointerCancel={dragGuard.onPointerCancel}
+								onClick={(event) => {
+									if (dragGuard.allowClick(event)) selectOther();
+								}}
 								className={cn(
-									"flex items-start gap-3 rounded-lg border px-3 py-2 text-left text-sm outline-none transition-colors",
+									"flex select-text items-start gap-3 rounded-lg border px-3 py-2 text-left text-sm outline-none transition-colors",
 									sel.otherSelected ? "border-primary bg-accent" : "border-dashed hover:bg-accent/50",
 									kbdIdx === optionCount && !sel.otherSelected && "ring-1 ring-border bg-accent/40",
 								)}

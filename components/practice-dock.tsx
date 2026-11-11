@@ -32,6 +32,9 @@ import { cn } from "@/lib/utils";
 export interface PracticeDockProps {
 	/** The active problem's tool-call id (submissions target it). */
 	problemCallId: string;
+	/** The pose's assistant message — the selection popup's backlink anchor
+	 *  for glossary/highlight saves from the dock. */
+	messageId?: string;
 	/** The pose's arguments — only the statement is the learner's (the
 	 *  mode badge would edge toward announcing the target; dropped). */
 	input: { statement: string };
@@ -49,7 +52,7 @@ export interface PracticeDockProps {
 	compactionRunning?: boolean;
 }
 
-export function PracticeDock({ problemCallId, input, expanded, onExpand, onSubmit, onEscape, compactionRunning = false }: PracticeDockProps) {
+export function PracticeDock({ problemCallId, messageId, input, expanded, onExpand, onSubmit, onEscape, compactionRunning = false }: PracticeDockProps) {
 	const [thinking, setThinking] = useState("");
 	// Ref MIRRORS the field ("nothing gets lost", the question-dock
 	// discipline): a submit resuming after `await finishDictation()` reads
@@ -101,12 +104,12 @@ export function PracticeDock({ problemCallId, input, expanded, onExpand, onSubmi
 
 	/* ── the expanded form ── */
 	return (
-		<div data-testid="practice-dock" data-problem={problemCallId}>
+		<div data-testid="practice-dock" data-problem={problemCallId} data-source-message-id={messageId}>
 			{/* The agent's half: the 'Problem' eyebrow (mirroring the quiz
 			    cards' label row — owner round, 2026-10-05) + the statement,
 			    markdown + LaTeX rendered, capped by the measured column
 			    (--dock-max-h; the old fixed 40vh cut long problems short). */}
-			<div data-dock-scroll-area="" className="max-h-[var(--dock-max-h,40vh)] overflow-y-auto px-4 pt-3 pb-2">
+			<div data-dock-scroll-area="" data-highlightable className="max-h-[var(--dock-max-h,40vh)] overflow-y-auto px-4 pt-3 pb-2">
 				<div className="mb-1 text-xs font-medium font-ui uppercase tracking-wide text-muted-foreground">Problem</div>
 				<div className="lh-prose text-[15px]">
 					<ToolContentResponse>{input.statement}</ToolContentResponse>

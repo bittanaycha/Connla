@@ -152,7 +152,15 @@ describe("practice flow (scripted model)", () => {
 		assert.equal(ack.toolName, "problem");
 		assert.equal(ack.isError, false);
 		assert.equal(needsContinuation(afterPose), false);
-		assert.equal(activeProblemOf(afterPose)?.toolCallId, "call-p1");
+		const pose = activeProblemOf(afterPose);
+		assert.equal(pose?.toolCallId, "call-p1");
+		// The pose's own message id rides along: it is the selection popup's
+		// backlink anchor when a glossary term is saved from the dock.
+		const poseAssistant = afterPose.find(
+			(m) => (m as { role?: string }).role === "assistant" && JSON.stringify((m as { content?: unknown }).content).includes('"call-p1"'),
+		) as { id?: string } | undefined;
+		assert.ok(poseAssistant?.id, "the persisted pose carries a message id");
+		assert.equal(pose?.messageId, poseAssistant.id);
 
 		// ── Turn 2: the submission arrives as a single-lane thinking message ──
 		await drainTurn(post(chat.id, { type: "thinking", problemCallId: "call-p1", text: "|G|=p; ⟨x⟩ has order dividing p" }), factory);

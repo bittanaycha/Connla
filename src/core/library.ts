@@ -22,6 +22,11 @@ export const MAX_GLOSSARY_CONTEXT_CHARS = 800;
 /** Highlights keep a quote, not a chapter. */
 export const MAX_HIGHLIGHT_CHARS = 4000;
 
+/** A translation request is a passage, not a chapter. */
+export const MAX_TRANSLATE_CHARS = 2000;
+export const MAX_TRANSLATION_CHARS = 2000;
+export const MAX_TRANSLATION_NOTE_CHARS = 240;
+
 export const MAX_READING_TITLE_CHARS = 200;
 export const MAX_READING_AUTHOR_CHARS = 120;
 export const MAX_READING_URL_CHARS = 2000;
@@ -109,6 +114,13 @@ export interface GeneratedDefinition {
 	definition: string;
 }
 
+/** The model's strict-JSON translation answer, already clamped. */
+export interface GeneratedTranslation {
+	translation: string;
+	/** One optional sentence about a grammar point, idiom, or false friend. */
+	note: string;
+}
+
 const LANGUAGE_CODE = /^[a-z]{2,3}(?:[-_][a-z]{2,4})?$/i;
 
 /** Trim + collapse whitespace; null/undefined/non-strings become "". */
@@ -190,14 +202,11 @@ export function sanitizeSource(value: unknown): LibrarySource {
 }
 
 /**
- * Parse the model's definition answer. The prompt asks for strict JSON;
- * fences and a sentence around the object are tolerated because they are
- * free to strip and a retry costs more than a brace search.
+ * Pull the JSON object out of a model answer. The prompts ask for strict
+ * JSON; fences and a sentence around the object are tolerated because they
+ * are free to strip and a retry costs more than a brace search.
  */
-export function parseGeneratedDefinition(
-	raw: string,
-	fallbackLanguage: PronounceLanguage = "en",
-): GeneratedDefinition | null {
+function sliceJsonObject(raw: string): string | null {
 	if (typeof raw !== "string") return null;
 	let text = raw.trim();
 	if (text.startsWith("```")) {
@@ -206,9 +215,21 @@ export function parseGeneratedDefinition(
 	const start = text.indexOf("{");
 	const end = text.lastIndexOf("}");
 	if (start === -1 || end <= start) return null;
+	return text.slice(start, end + 1);
+}
+
+/**
+ * Parse the model's definition answer.
+ */
+export function parseGeneratedDefinition(
+	raw: string,
+	fallbackLanguage: PronounceLanguage = "en",
+): GeneratedDefinition | null {
+	const json = sliceJsonObject(raw);
+	if (!json) return null;
 	let parsed: unknown;
 	try {
-		parsed = JSON.parse(text.slice(start, end + 1));
+		parsed = JSON.parse(json);
 	} catch {
 		return null;
 	}
@@ -222,5 +243,25 @@ export function parseGeneratedDefinition(
 		language: normalizeLanguage(record.language, fallbackLanguage),
 		partOfSpeech: cleanText(record.partOfSpeech, MAX_PART_OF_SPEECH_CHARS),
 		definition,
+	};
+}
+
+/** Parse the model's translation answer. `note` is optional. */
+export function parseTranslation(raw: string): GeneratedTranslation | null {
+	const json = sliceJsonObject(raw);
+	if (!json) return null;
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(json);
+	} catch {
+		return null;
+	}
+	if (!parsed || typeof parsed !== "object") return null;
+	const record = parsed as Record<string, unknown>;
+	const translation = cleanMultiline(record.translation, MAX_TRANSLATION_CHARS);
+	if (!translation) return null;
+	return {
+		translation,
+		note: cleanText(record.note, MAX_TRANSLATION_NOTE_CHARS),
 	};
 }

@@ -9,7 +9,7 @@ import test, { after } from "node:test";
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "connla-library-"));
 process.env.LH_DATA_DIR = dir;
 
-const { MAX_GLOSSARY_CHARS, normalizeLanguage, parseGeneratedDefinition, readingKey } = await import(
+const { MAX_GLOSSARY_CHARS, MAX_TRANSLATE_CHARS, normalizeLanguage, parseGeneratedDefinition, parseTranslation, readingKey } = await import(
 	"../src/core/library.ts"
 );
 const { createLibraryStore } = await import("../src/store/library.ts");
@@ -56,6 +56,34 @@ test("parseGeneratedDefinition falls back to the hinted language and clamps the 
 	assert.equal(parsed?.definition.length, 600);
 });
 
+test("parseTranslation reads strict JSON and keeps the optional note", () => {
+	assert.deepEqual(parseTranslation('{"translation":"I was eating an apple.","note":"imparfait: an ongoing past action"}'), {
+		translation: "I was eating an apple.",
+		note: "imparfait: an ongoing past action",
+	});
+});
+
+test("parseTranslation strips a code fence and prose around the object", () => {
+	const parsed = parseTranslation('Here:\n```json\n{"translation":"I used to eat"}\n```');
+	assert.equal(parsed?.translation, "I used to eat");
+	assert.equal(parsed?.note, "");
+});
+
+test("parseTranslation rejects answers without a translation", () => {
+	assert.equal(parseTranslation('{"translation":"   ","note":"x"}'), null);
+	assert.equal(parseTranslation('{"note":"x"}'), null);
+	assert.equal(parseTranslation("not json"), null);
+	assert.equal(parseTranslation(""), null);
+});
+
+test("parseTranslation collapses note whitespace and clamps the translation", () => {
+	const parsed = parseTranslation(
+		JSON.stringify({ translation: "a".repeat(2500), note: "  a very\n\tlong   note  " }),
+	);
+	assert.equal(parsed?.translation.length, 2000);
+	assert.equal(parsed?.note, "a very long note");
+});
+
 test("normalizeLanguage only accepts the supported base codes", () => {
 	assert.equal(normalizeLanguage("fr-FR"), "fr");
 	assert.equal(normalizeLanguage("PT_pt"), "pt");
@@ -71,8 +99,9 @@ test("readingKey ignores scheme, www, query, and trailing slash", () => {
 	assert.equal(readingKey("  Book Title ", ""), "title:book title");
 });
 
-test("a glossary term cap is exposed to the routes", () => {
+test("the glossary and translation caps are exposed to the routes", () => {
 	assert.equal(MAX_GLOSSARY_CHARS, 160);
+	assert.equal(MAX_TRANSLATE_CHARS, 2000);
 });
 
 // ─── Store round-trip ───────────────────────────────────────────────────────

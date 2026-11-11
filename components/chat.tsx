@@ -1526,7 +1526,7 @@ export function Chat({
 											</div>
 									) : (
 									<Message from="assistant" className="max-w-full">
-									<MessageContent className="w-full">
+									<MessageContent className="w-full" data-message-id={m.id}>
 											{m.parts.map((part, pi) => {
 												const isLastPart = mi === messages.length - 1 && pi === m.parts.length - 1;
 												// The step boundary where teaching begins (round 8): when
@@ -1963,9 +1963,11 @@ function DockOverlay({
 	 *  affordance gate (the server's registry is the real one). */
 	compactionRunning: boolean;
 	/** The ACTIVE practice problem (practice sessions, 2026-10-04):
-	 *  {toolCallId, input} — dock ownership exactly like a pending
-	 *  question (the composer is replaced); null in teaching sessions. */
-	practice: { toolCallId: string; input: unknown } | null;
+	 *  {toolCallId, input, messageId} — dock ownership exactly like a
+	 *  pending question (the composer is replaced); null in teaching
+	 *  sessions. messageId is the pose's assistant message, so a selection
+	 *  inside the dock can save a library entry with a backlink. */
+	practice: { toolCallId: string; input: unknown; messageId: string } | null;
 	/** (commit, text) — the practice dock's two submit lanes. */
 	onSubmitThinking: (text: string) => void;
 	/** Teach-phase pending question: arrives collapsed behind the reveal button (W5). */
@@ -2399,6 +2401,7 @@ function DockOverlay({
 								<QuestionDock
 									toolName={pending.tool as "quiz" | "probe" | "ask_user_question" | "explain" | "recall"}
 									toolCallId={pending.toolCallId}
+									messageId={pending.messageId}
 									input={pending.input as never}
 									expanded={expanded}
 									reveal={revealPending}
@@ -2414,6 +2417,7 @@ function DockOverlay({
 							) : practice ? (
 								<PracticeDock
 									problemCallId={practice.toolCallId}
+									messageId={practice.messageId}
 									input={practice.input as { statement: string }}
 									expanded={expanded}
 									onExpand={() => {
