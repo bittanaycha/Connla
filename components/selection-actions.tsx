@@ -291,6 +291,15 @@ export function SelectionActions() {
 		setListenState("idle");
 	}, [language]);
 
+	useEffect(() => {
+		try {
+			const saved = window.localStorage.getItem(DECK_STORAGE_KEY);
+			if (saved) setDeckName(saved);
+		} catch {
+			// private mode
+		}
+	}, []);
+
 	if (!mounted || !selection) return null;
 
 	const glossaryDisabled = busy !== null || selection.text.length > MAX_GLOSSARY_CHARS;
@@ -596,15 +605,6 @@ export function SelectionActions() {
 			// private mode
 		}
 	};
-
-	useEffect(() => {
-		try {
-			const saved = window.localStorage.getItem(DECK_STORAGE_KEY);
-			if (saved) setDeckName(saved);
-		} catch {
-			// private mode
-		}
-	}, []);
 
 	const setChosenTarget = (value: string) => {
 		if (!isPronounceLanguage(value) || value === target) return;

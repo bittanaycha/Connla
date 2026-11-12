@@ -85,8 +85,8 @@ Future teaching sessions can read the graph instead of starting from scratch. Pr
 
 Connla builds are published on this fork's [GitHub Releases](https://github.com/bittanaycha/Connla/releases).
 
-- **macOS (Apple Silicon):** download the DMG and drag the app to Applications. The 1.0.0 build is signed but not notarized; on first launch, macOS may ask you to confirm the app.
-- **Windows and Linux:** the build configuration supports both, but the 1.0.0 release contains only the macOS build. Build from source with `npm run desktop:dist` on the target platform.
+- **macOS (Apple Silicon):** download the DMG and drag the app to Applications. The macOS build is signed but not notarized; on first launch, macOS may ask you to confirm the app.
+- **Windows and Linux:** the build configuration supports both, but the current release contains only the macOS build. Build from source with `npm run desktop:dist` on the target platform.
 
 Upstream LearnHarness builds ship the upstream skin. To run Connla, use a Connla release or build this checkout.
 
@@ -113,7 +113,7 @@ npm run lint
 
 The packaged app is built from the Next.js standalone output by `scripts/build-server.mjs`, then wrapped by `electron-builder`. `desktop:dist` also notarizes on macOS; on a machine without Xcode or a notary profile, pass `--config.mac.icon=build/icon.icns --config.mac.notarize=false` instead (the config's `build/icon.icon` needs `actool`).
 
-Connla 1.0.0 updates come from this repository's GitHub Releases. The app checks `latest-mac.yml` and the zip asset; publishing a release requires the DMG, the zip, both blockmaps, and `latest-mac.yml`.
+Connla updates come from this repository's GitHub Releases. The app checks `latest-mac.yml` and the zip asset; publishing a release requires the DMG, the zip, both blockmaps, and `latest-mac.yml`.
 
 See the [documentation index](docs/README.md) for all guides, [development](docs/development.md) for setup and checks, [architecture](docs/architecture.md) for the runtime, [keyboard shortcuts](docs/keyboard.md), and [desktop builds and releases](docs/desktop-release.md).
 
