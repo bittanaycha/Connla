@@ -5,6 +5,7 @@ import { JobCard, PdfJobCard } from "@/components/artifacts/job-card";
 import { VisualCard } from "@/components/artifacts/visual-card";
 import { ImageCard } from "@/components/artifacts/image-card";
 import { MapCard } from "@/components/artifacts/map-card";
+import { AnkiCard } from "@/components/artifacts/anki-card";
 import { ProbeDoneCard } from "@/components/artifacts/probe-done-card";
 import { ToolCallCard } from "@/components/artifacts/tool-call-card";
 import { ProblemCard, ConcludeCard } from "@/components/practice-cards";
@@ -35,6 +36,9 @@ export const artifactRenderers: Record<string, ComponentType<ArtifactPartProps>>
 	// A synchronous map (2026-11): inline SVG, PNG/SVG download, copy,
 	// fullscreen. No job or steer — the map is already in the turn.
 	map: MapCard,
+	// A teacher-authored Anki deck (Anki wave, 2026-11-12): download +
+	// sandboxed preview of every card with the deck CSS.
+	export_anki: AnkiCard,
 	// The probe conclusion: the assessment belongs to the learner as much as
 	// to the transcript (docs/archive/probe-teach-split.md §2). Plain v1 card.
 	probe_done: ProbeDoneCard,

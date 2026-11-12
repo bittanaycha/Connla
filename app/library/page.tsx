@@ -11,6 +11,7 @@ export default function LibraryPage() {
 			initialGlossary={stores.libraryStore.listGlossary()}
 			initialHighlights={stores.libraryStore.listHighlights()}
 			initialReading={stores.libraryStore.listReading()}
+			initialCards={stores.cardStore.listCards()}
 		/>
 	);
 }

@@ -2,9 +2,9 @@
 
 /**
  * The on-highlight action popup (library wave): a single floating card for
- * Listen (Edge), Add to glossary, Save highlight, Wikipedia, Google, and
- * Translate — an inline panel that replaces the grid with a target language,
- * the translation, an optional one-line note, Copy and Back.
+ * Listen (Edge), Add to glossary, Save highlight, Wikipedia, Google, Translate,
+ * and Create card — inline panels for a target language, a translation, an
+ * explanation, deck choice, and direct-or-queued delivery to Anki.
  *
  * Mounted once in AppShell. It only appears for a non-collapsed selection
  * that starts and ends inside `[data-highlightable]` prose, so sidebar
@@ -22,8 +22,10 @@ import {
 	CopyIcon,
 	HighlighterIcon,
 	LanguagesIcon,
+	LayersIcon,
 	Loader2Icon,
 	PlusIcon,
+	RefreshCwIcon,
 	SearchIcon,
 	Volume2Icon,
 	XIcon,
@@ -55,6 +57,7 @@ type Feedback = { tone: "ok" | "warn" | "error"; text: string } | null;
 type ListenState = "idle" | "loading" | "playing";
 
 const LANGUAGE_STORAGE_KEY = "lh.selection.language";
+const DECK_STORAGE_KEY = "lh.cards.deck";
 const TARGET_STORAGE_KEY = "lh.selection.target";
 const POPUP_WIDTH = 304;
 
@@ -125,12 +128,18 @@ export function SelectionActions() {
 	const [language, setLanguage] = useState<PronounceLanguage>("en");
 	const [listenState, setListenState] = useState<ListenState>("idle");
 	const [feedback, setFeedback] = useState<Feedback>(null);
-	const [busy, setBusy] = useState<"glossary" | "highlight" | "translate" | null>(null);
-	const [mode, setMode] = useState<"actions" | "translate">("actions");
+	const [busy, setBusy] = useState<"glossary" | "highlight" | "translate" | "card" | "explain" | null>(null);
+	const [mode, setMode] = useState<"actions" | "translate" | "card" | "explain">("actions");
 	const [target, setTarget] = useState<PronounceLanguage>("en");
 	const [translation, setTranslation] = useState<GeneratedTranslation | null>(null);
 	const [translateError, setTranslateError] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
+	const [explanation, setExplanation] = useState<string | null>(null);
+	const [explainError, setExplainError] = useState<string | null>(null);
+	const [deckName, setDeckName] = useState("Connla Cards");
+	const [ankiDecks, setAnkiDecks] = useState<string[] | null>(null);
+	const [ankiConnected, setAnkiConnected] = useState<boolean | null>(null);
+	const [cardSaved, setCardSaved] = useState(false);
 	const [popupHeight, setPopupHeight] = useState(0);
 	const popupRef = useRef<HTMLDivElement | null>(null);
 	const audioRef = useRef<EdgeAudioHandle | null>(null);
@@ -169,6 +178,9 @@ export function SelectionActions() {
 		setTranslation(null);
 		setTranslateError(null);
 		setCopied(false);
+		setExplanation(null);
+		setExplainError(null);
+		setCardSaved(false);
 	};
 
 	useEffect(() => {
@@ -191,6 +203,9 @@ export function SelectionActions() {
 				null;
 			const rect = range.getBoundingClientRect();
 			const nextLanguage = chooseLanguage(text, start, end);
+			abortRef.current?.abort();
+			abortRef.current = null;
+			setBusy(null);
 			setFeedback(null);
 			setListenState("idle");
 			releaseEdgeAudio(audioRef.current);
@@ -199,6 +214,9 @@ export function SelectionActions() {
 			setTranslation(null);
 			setTranslateError(null);
 			setCopied(false);
+			setExplanation(null);
+			setExplainError(null);
+			setCardSaved(false);
 			setTarget(storedTarget());
 			setLanguage(nextLanguage);
 			setSelection({
@@ -427,8 +445,166 @@ export function SelectionActions() {
 	const startTranslate = () => {
 		if (translateDisabled) return;
 		setMode("translate");
+		setCardSaved(false);
+		ensureDecks();
 		void runTranslate(target);
 	};
+
+	const loadAnkiDecks = async () => {
+		try {
+			const response = await fetch("/api/anki/decks");
+			const body = (await response.json().catch(() => null)) as
+				| { connected?: boolean; decks?: string[] }
+				| null;
+			setAnkiConnected(body?.connected === true);
+			setAnkiDecks(Array.isArray(body?.decks) ? body.decks : []);
+		} catch {
+			setAnkiConnected(false);
+			setAnkiDecks([]);
+		}
+	};
+
+	const ensureDecks = () => {
+		if (ankiDecks === null && ankiConnected === null) void loadAnkiDecks();
+	};
+
+	const startCard = () => {
+		if (translateDisabled) return;
+		setMode("card");
+		setFeedback(null);
+		setCardSaved(false);
+		ensureDecks();
+	};
+
+	const runExplain = async () => {
+		abortRef.current?.abort();
+		const controller = new AbortController();
+		abortRef.current = controller;
+		setBusy("explain");
+		setExplainError(null);
+		setExplanation(null);
+		setCardSaved(false);
+		let response: Response | null = null;
+		try {
+			response = await fetch("/api/explain", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					text: selection.text,
+					language,
+					context: selection.context,
+				}),
+				signal: controller.signal,
+			});
+		} catch {
+			response = null;
+		}
+		if (controller.signal.aborted) return;
+		setBusy(null);
+		const data = response
+			? ((await response.json().catch(() => null)) as { explanation?: string } | null)
+			: null;
+		if (!response?.ok) {
+			setExplainError(
+				response?.status === 503
+					? "No model configured for explanations."
+					: response?.status === 422
+						? `Select up to ${MAX_TRANSLATE_CHARS} characters to explain.`
+						: "The explanation could not be generated.",
+			);
+			return;
+		}
+		const text = typeof data?.explanation === "string" ? data.explanation.trim() : "";
+		if (!text) {
+			setExplainError("The explanation came back empty.");
+			return;
+		}
+		setExplanation(text);
+	};
+
+	const startExplain = () => {
+		if (translateDisabled) return;
+		setMode("explain");
+		setFeedback(null);
+		setCardSaved(false);
+		ensureDecks();
+		void runExplain();
+	};
+
+	const saveCard = async (kind: "translation" | "explanation") => {
+		const back = kind === "translation" ? translation?.translation : explanation;
+		if (!back || busy !== null || cardSaved || !deckName.trim()) return;
+		setBusy("card");
+		setFeedback(null);
+		const created = await postAction("/api/cards", {
+			kind,
+			front: selection.text,
+			back,
+			note: kind === "translation" ? (translation?.note ?? "") : "",
+			language,
+			target: kind === "translation" ? target : null,
+			source: { chatId, messageId: selection.messageId },
+		});
+		if (!created.ok) {
+			setBusy(null);
+			setFeedback({
+				tone: "error",
+				text:
+					created.status === 422
+						? `Select up to ${MAX_TRANSLATE_CHARS} characters for a card.`
+						: "The card could not be saved.",
+			});
+			return;
+		}
+		const data = created.data as
+			| { card?: { id: string }; duplicate?: boolean; warning?: string }
+			| null;
+		const cardId = data?.card?.id;
+		const warning = data?.warning ? ` ${data.warning}` : "";
+		let sent = false;
+		let sendError = "";
+		if (ankiConnected === true && cardId) {
+			const delivered = await postAction("/api/cards/send", { deckName, ids: [cardId] });
+			if (delivered.ok) {
+				const body = delivered.data as { sent?: number; failed?: { error?: string }[] } | null;
+				if (body?.sent) sent = true;
+				else sendError = body?.failed?.[0]?.error ?? "Anki did not accept the card.";
+			} else {
+				sendError =
+					(delivered.data as { error?: string } | null)?.error ?? "AnkiConnect is not reachable.";
+			}
+		}
+		setBusy(null);
+		setCardSaved(true);
+		if (sent) {
+			setFeedback({ tone: "ok", text: `Sent to Anki (${deckName}).${warning}` });
+		} else if (sendError) {
+			setFeedback({ tone: "warn", text: `Saved to Cards; ${sendError}${warning}` });
+		} else {
+			setFeedback({
+				tone: data?.duplicate ? "warn" : "ok",
+				text: data?.duplicate ? "Already in Cards." : `Saved to Cards.${warning}`,
+			});
+		}
+	};
+
+	const selectedDeck = (value: string) => {
+		setDeckName(value);
+		try {
+			window.localStorage.setItem(DECK_STORAGE_KEY, value);
+		} catch {
+			// private mode
+		}
+	};
+
+	useEffect(() => {
+		try {
+			const saved = window.localStorage.getItem(DECK_STORAGE_KEY);
+			if (saved) setDeckName(saved);
+		} catch {
+			// private mode
+		}
+	}, []);
 
 	const setChosenTarget = (value: string) => {
 		if (!isPronounceLanguage(value) || value === target) return;
@@ -452,6 +628,21 @@ export function SelectionActions() {
 		}
 	};
 
+	const copyExplanation = async () => {
+		if (!explanation) return;
+		try {
+			await navigator.clipboard.writeText(explanation);
+			setCopied(true);
+			if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+			copyTimerRef.current = window.setTimeout(() => {
+				copyTimerRef.current = null;
+				setCopied(false);
+			}, 1500);
+		} catch {
+			setFeedback({ tone: "error", text: "The clipboard was unavailable." });
+		}
+	};
+
 	const backToActions = () => {
 		abortRef.current?.abort();
 		setBusy(null);
@@ -459,8 +650,58 @@ export function SelectionActions() {
 		setTranslation(null);
 		setTranslateError(null);
 		setCopied(false);
+		setExplanation(null);
+		setExplainError(null);
+		setCardSaved(false);
 		setFeedback(null);
 	};
+
+	const cardControls = (kind: "translation" | "explanation") => (
+		<div className="flex flex-col gap-1.5 rounded-sm border border-border/70 bg-muted/30 p-1.5">
+			<div className="flex items-center gap-1">
+				<label className="inline-flex min-w-0 flex-1 items-center gap-1 rounded-sm border border-border/70 bg-background px-1.5 py-1">
+					<span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">Deck</span>
+					<input
+						value={deckName}
+						onChange={(event) => selectedDeck(event.target.value)}
+						list="selection-anki-decks"
+						aria-label="Anki deck name"
+						className="min-w-0 flex-1 bg-transparent text-[11px] text-foreground outline-none"
+					/>
+				</label>
+				<button
+					type="button"
+					onClick={() => void loadAnkiDecks()}
+					title="Check AnkiConnect"
+					aria-label="Check AnkiConnect"
+					className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm border border-border/70 text-muted-foreground hover:bg-accent hover:text-foreground"
+				>
+					<RefreshCwIcon className={cn("size-3", ankiConnected === null && "animate-spin")} />
+				</button>
+			</div>
+			<datalist id="selection-anki-decks">
+				{(ankiDecks ?? []).map((name) => (
+					<option key={name} value={name} />
+				))}
+			</datalist>
+			<button
+				type="button"
+				onClick={() => void saveCard(kind)}
+				disabled={busy !== null || cardSaved || !deckName.trim()}
+				className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-sm border border-border/70 bg-background px-2 text-[11px] font-medium text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
+			>
+				{busy === "card" ? <Loader2Icon className="size-3.5 animate-spin" /> : <LayersIcon className="size-3.5" />}
+				{cardSaved ? "Saved" : ankiConnected === true ? "Send to Anki" : "Save to Cards"}
+			</button>
+			<p className="text-[10px] leading-snug text-muted-foreground">
+				{ankiConnected === null
+					? "Checking AnkiConnect…"
+					: ankiConnected
+						? `Sends to “${deckName}” when Anki is running.`
+						: "AnkiConnect not connected — the card waits in the Cards queue."}
+			</p>
+		</div>
+	);
 
 	const left = Math.max(8, Math.min(selection.x - POPUP_WIDTH / 2, window.innerWidth - POPUP_WIDTH - 8));
 	const height = popupHeight || 220;
@@ -570,6 +811,81 @@ export function SelectionActions() {
 							onClick={backToActions}
 						/>
 					</div>
+					{translation ? cardControls("translation") : null}
+				</div>
+			) : mode === "card" ? (
+				<div className="flex flex-col gap-2">
+					<p className="text-[11px] leading-snug text-muted-foreground">Make a card from this selection.</p>
+					<button
+						type="button"
+						onClick={startTranslate}
+						disabled={translateDisabled}
+						className="inline-flex items-center gap-2 rounded-sm border border-border/70 px-2 py-1.5 text-left transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
+					>
+						<LanguagesIcon className="size-4 shrink-0 text-muted-foreground" />
+						<span className="min-w-0">
+							<span className="block text-[11px] font-medium text-foreground">Translation</span>
+							<span className="block truncate text-[10px] text-muted-foreground">
+								Source + audio → {PRONOUNCE_LANGUAGE_NAMES[target]}
+							</span>
+						</span>
+					</button>
+					<button
+						type="button"
+						onClick={startExplain}
+						disabled={translateDisabled}
+						className="inline-flex items-center gap-2 rounded-sm border border-border/70 px-2 py-1.5 text-left transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
+					>
+						<BookOpenIcon className="size-4 shrink-0 text-muted-foreground" />
+						<span className="min-w-0">
+							<span className="block text-[11px] font-medium text-foreground">Explanation</span>
+							<span className="block truncate text-[10px] text-muted-foreground">
+								The selected text, explained
+							</span>
+						</span>
+					</button>
+					<ActionButton
+						icon={<ArrowLeftIcon className="size-3.5" />}
+						label="Back"
+						title="Back to the actions"
+						onClick={backToActions}
+					/>
+				</div>
+			) : mode === "explain" ? (
+				<div className="flex flex-col gap-2">
+					<div className="flex items-center justify-between">
+						<span className="text-[11px] font-medium text-foreground">Explanation</span>
+					</div>
+					<div className="min-h-16 rounded-sm border border-border/70 px-2 py-1.5">
+						{busy === "explain" ? (
+							<p className="flex items-center gap-1.5 text-[11px] leading-snug text-muted-foreground">
+								<Loader2Icon className="size-3 animate-spin" />
+								Explaining…
+							</p>
+						) : explainError ? (
+							<p className="text-[11px] leading-snug text-destructive">{explainError}</p>
+						) : explanation ? (
+							<div className="max-h-52 overflow-y-auto">
+								<p className="whitespace-pre-wrap text-[13px] leading-snug text-foreground">{explanation}</p>
+							</div>
+						) : null}
+					</div>
+					{explanation ? cardControls("explanation") : null}
+					<div className="grid grid-cols-2 gap-1">
+						<ActionButton
+							icon={copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
+							label={copied ? "Copied" : "Copy"}
+							disabled={!explanation}
+							title="Copy the explanation"
+							onClick={() => void copyExplanation()}
+						/>
+						<ActionButton
+							icon={<ArrowLeftIcon className="size-3.5" />}
+							label="Back"
+							title="Back to the actions"
+							onClick={backToActions}
+						/>
+					</div>
 				</div>
 			) : (
 				<>
@@ -620,6 +936,20 @@ export function SelectionActions() {
 					>
 						<LanguagesIcon className="size-3.5" />
 						Translate into {PRONOUNCE_LANGUAGE_NAMES[target]}
+					</button>
+					<button
+						type="button"
+						onClick={startCard}
+						disabled={translateDisabled}
+						title={
+							selection.text.length > MAX_TRANSLATE_CHARS
+								? `Select up to ${MAX_TRANSLATE_CHARS} characters to make a card`
+								: "Make an Anki card from this selection"
+						}
+						className="inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-sm border border-border/70 px-2 text-[11px] font-medium text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
+					>
+						<LayersIcon className="size-3.5" />
+						Create card
 					</button>
 				</>
 			)}

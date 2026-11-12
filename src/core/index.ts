@@ -21,6 +21,11 @@ export * from "./pronounce.ts";
 // definition parser — pure and browser-safe; the shell's popup/library
 // view import their types and caps from here.
 export * from "./library.ts";
+// Anki decks (Anki wave): validation + the self-contained preview renderer.
+// The .apkg writer is server-only (node:sqlite).
+export * from "./anki.ts";
+// Quick cards (Anki wave): the selection-popup queue records.
+export * from "./cards.ts";
 export { embedLearnerImage } from "./learner-image-svg.ts";
 export * from "./ports.ts";
 export * from "./chains.ts";

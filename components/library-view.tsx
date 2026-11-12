@@ -5,16 +5,20 @@ import Link from "next/link";
 import {
 	BookMarkedIcon,
 	BookOpenIcon,
+	DownloadIcon,
 	CheckIcon,
 	CopyIcon,
 	ExternalLinkIcon,
 	HighlighterIcon,
+	LayersIcon,
 	Loader2Icon,
 	PencilIcon,
 	PlayIcon,
 	PlusIcon,
 	RefreshCwIcon,
 	SearchIcon,
+	SendIcon,
+	SquareIcon,
 	Trash2Icon,
 	XIcon,
 } from "lucide-react";
@@ -24,24 +28,29 @@ import { cn } from "@/lib/utils";
 import { fetchEdgeAudio, releaseEdgeAudio } from "@/lib/edge-audio";
 import {
 	PRONOUNCE_LANGUAGE_NAMES,
+	flashcardKindLabel,
+	type AnkiExportDetails,
+	type FlashcardRecord,
 	type GlossaryEntry,
 	type HighlightEntry,
 	type LibrarySource,
 	type ReadingItem,
 } from "@/src/core";
 
-type Tab = "glossary" | "highlights" | "reading";
+type Tab = "glossary" | "highlights" | "reading" | "cards";
 
 const TABS: { id: Tab; label: string; icon: typeof BookMarkedIcon }[] = [
 	{ id: "glossary", label: "Glossary", icon: BookMarkedIcon },
 	{ id: "highlights", label: "Highlights", icon: HighlighterIcon },
 	{ id: "reading", label: "Reading list", icon: BookOpenIcon },
+	{ id: "cards", label: "Cards", icon: LayersIcon },
 ];
 
 interface Props {
 	initialGlossary: GlossaryEntry[];
 	initialHighlights: HighlightEntry[];
 	initialReading: ReadingItem[];
+	initialCards: FlashcardRecord[];
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -79,12 +88,17 @@ function SourceLine({ source, createdAt }: { source: LibrarySource; createdAt: s
 	);
 }
 
-export function LibraryView({ initialGlossary, initialHighlights, initialReading }: Props) {
+export function LibraryView({ initialGlossary, initialHighlights, initialReading, initialCards }: Props) {
 	const [tab, setTab] = useState<Tab>("glossary");
 	const [query, setQuery] = useState("");
 	const [glossary, setGlossary] = useState(initialGlossary);
 	const [highlights, setHighlights] = useState(initialHighlights);
 	const [reading, setReading] = useState(initialReading);
+	const [cards, setCards] = useState(initialCards);
+	const [deckName, setDeckName] = useState("Connla Cards");
+	const [ankiConnected, setAnkiConnected] = useState<boolean | null>(null);
+	const [ankiDecks, setAnkiDecks] = useState<string[]>([]);
+	const [playingCard, setPlayingCard] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [notice, setNotice] = useState<string | null>(null);
 	const [busy, setBusy] = useState<string | null>(null);
@@ -110,11 +124,14 @@ export function LibraryView({ initialGlossary, initialHighlights, initialReading
 	} | null>(null);
 
 	const audioRef = useRef<{ audio: HTMLAudioElement; url: string } | null>(null);
+	const cardAudioRef = useRef<HTMLAudioElement | null>(null);
 
 	useEffect(() => {
 		return () => {
 			releaseEdgeAudio(audioRef.current);
 			audioRef.current = null;
+			cardAudioRef.current?.pause();
+			cardAudioRef.current = null;
 		};
 	}, []);
 
@@ -157,10 +174,24 @@ export function LibraryView({ initialGlossary, initialHighlights, initialReading
 		[reading, q],
 	);
 
+	const cardRows = useMemo(
+		() =>
+			cards
+				.filter(
+					(entry) =>
+						!q ||
+						[entry.front, entry.back, entry.note].some((value) => value.toLowerCase().includes(q)),
+				)
+				.slice()
+				.reverse(),
+		[cards, q],
+	);
+
 	const counts: Record<Tab, number> = {
 		glossary: glossary.length,
 		highlights: highlights.length,
 		reading: reading.length,
+		cards: cards.length,
 	};
 
 	function flash(message: string) {
@@ -177,6 +208,134 @@ export function LibraryView({ initialGlossary, initialHighlights, initialReading
 		audioRef.current = null;
 		setPlaying(null);
 	}
+
+	function stopCardAudio() {
+		cardAudioRef.current?.pause();
+		cardAudioRef.current = null;
+		setPlayingCard(null);
+	}
+
+	function selectedDeck(value: string) {
+		setDeckName(value);
+		window.localStorage.setItem("lh.cards.deck", value);
+	}
+
+	async function loadAnkiDecks() {
+		try {
+			const response = await fetch("/api/anki/decks");
+			const body = (await response.json().catch(() => null)) as
+				| { connected?: boolean; decks?: string[] }
+				| null;
+			const connected = body?.connected === true;
+			setAnkiConnected(connected);
+			setAnkiDecks(Array.isArray(body?.decks) ? body.decks : []);
+		} catch {
+			setAnkiConnected(false);
+			setAnkiDecks([]);
+		}
+	}
+
+	async function playCard(entry: FlashcardRecord) {
+		stopCardAudio();
+		setError(null);
+		const audio = new Audio(`/api/cards/${entry.id}/audio`);
+		cardAudioRef.current = audio;
+		setPlayingCard(entry.id);
+		audio.onended = () => {
+			if (cardAudioRef.current === audio) cardAudioRef.current = null;
+			setPlayingCard((current) => (current === entry.id ? null : current));
+		};
+		try {
+			await audio.play();
+		} catch {
+			if (cardAudioRef.current === audio) cardAudioRef.current = null;
+			setPlayingCard(null);
+			setError("Audio could not play.");
+		}
+	}
+
+	async function removeCard(entry: FlashcardRecord) {
+		setBusy(`card-delete:${entry.id}`);
+		setError(null);
+		try {
+			await readBody(await fetch(`/api/cards/${entry.id}`, { method: "DELETE" }));
+			setCards((rows) => rows.filter((row) => row.id !== entry.id));
+			setPendingDelete(null);
+			if (playingCard === entry.id) stopCardAudio();
+		} catch (value) {
+			noteError(value);
+		} finally {
+			setBusy(null);
+		}
+	}
+
+	async function exportCards() {
+		setBusy("cards:export");
+		setError(null);
+		try {
+			const details = await readBody<AnkiExportDetails>(
+				await fetch("/api/cards/export", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ deckName }),
+				}),
+			);
+			const link = document.createElement("a");
+			link.href = details.downloadUrl;
+			link.download = "";
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+			flash(`Built “${details.deckName}” — ${details.cardCount} cards.`);
+		} catch (value) {
+			noteError(value);
+		} finally {
+			setBusy(null);
+		}
+	}
+
+	async function sendAllCards() {
+		setBusy("cards:send");
+		setError(null);
+		try {
+			const response = await fetch("/api/cards/send", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ deckName }),
+			});
+			const body = (await response.json().catch(() => null)) as
+				| { sent?: number; failed?: { error?: string }[]; error?: string }
+				| null;
+			if (!response.ok && !body?.failed?.length) {
+				throw new Error(body?.error ?? `Request failed (${response.status}).`);
+			}
+			const sent = body?.sent ?? 0;
+			const failed = body?.failed ?? [];
+			const list = await readBody<{ cards: FlashcardRecord[] }>(await fetch("/api/cards"));
+			setCards(list.cards);
+			if (failed.length) {
+				setError(`${sent} sent; ${failed.length} still queued — ${failed[0]?.error ?? "Anki did not accept them."}`);
+			} else {
+				flash(`Sent ${sent} card${sent === 1 ? "" : "s"} to Anki.`);
+			}
+		} catch (value) {
+			noteError(value);
+		} finally {
+			setBusy(null);
+		}
+	}
+
+	useEffect(() => {
+		const saved = window.localStorage.getItem("lh.cards.deck");
+		if (saved) setDeckName(saved);
+	}, []);
+
+	const ankiLoaded = useRef(false);
+	useEffect(() => {
+		if (tab !== "cards" || ankiLoaded.current) return;
+		ankiLoaded.current = true;
+		void loadAnkiDecks();
+	}, [tab]);
 
 	async function playWord(entry: GlossaryEntry) {
 		stopAudio();
@@ -391,6 +550,7 @@ export function LibraryView({ initialGlossary, initialHighlights, initialReading
 		glossary: "No terms yet. Select a word or phrase in a session and choose Add to glossary.",
 		highlights: "No highlights yet. Select a passage in a session and choose Save highlight.",
 		reading: "The reading list is empty. Add a book, article, or course you want to come back to.",
+		cards: "No cards yet. Select text in a session and choose Create card, or ask the teacher for an Anki deck.",
 	};
 
 	return (
@@ -399,7 +559,7 @@ export function LibraryView({ initialGlossary, initialHighlights, initialReading
 				<header>
 					<h1 className="font-serif text-3xl leading-none tracking-tight">Library</h1>
 					<p className="mt-2 font-serif text-sm text-muted-foreground">
-						Definitions, passages, and reading.
+						Definitions, passages, reading, and cards.
 					</p>
 				</header>
 
@@ -456,6 +616,63 @@ export function LibraryView({ initialGlossary, initialHighlights, initialReading
 						)}
 					>
 						{error ?? notice}
+					</div>
+				)}
+
+				{tab === "cards" && (
+					<div className="mt-3 rounded-lg border bg-card/40 p-3">
+						<div className="flex flex-wrap items-end gap-2">
+							<label className="min-w-40 flex-1">
+								<span className="mb-1 block font-ui text-[10px] uppercase tracking-wider text-muted-foreground">
+									Deck
+								</span>
+								<Input
+									value={deckName}
+									list="anki-deck-names"
+									onChange={(event) => selectedDeck(event.target.value)}
+									placeholder="Connla Cards"
+									className="h-8 font-serif"
+								/>
+								<datalist id="anki-deck-names">
+									{ankiDecks.map((name) => (
+										<option key={name} value={name} />
+									))}
+								</datalist>
+							</label>
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={() => void exportCards()}
+								disabled={!cards.length || busy !== null}
+							>
+								{busy === "cards:export" ? <Loader2Icon className="animate-spin" /> : <DownloadIcon />}
+								Download .apkg
+							</Button>
+							<Button
+								size="sm"
+								onClick={() => void sendAllCards()}
+								disabled={!cards.length || busy !== null || ankiConnected !== true}
+							>
+								{busy === "cards:send" ? <Loader2Icon className="animate-spin" /> : <SendIcon />}
+								Send all
+							</Button>
+							<Button
+								size="icon-sm"
+								variant="ghost"
+								aria-label="Check AnkiConnect"
+								title="Check AnkiConnect"
+								onClick={() => void loadAnkiDecks()}
+							>
+								<RefreshCwIcon />
+							</Button>
+						</div>
+						<p className="mt-2 font-ui text-[11px] text-muted-foreground">
+							{ankiConnected === null
+								? "Checking AnkiConnect…"
+								: ankiConnected
+									? "AnkiConnect is running. Send all, or download a standalone deck."
+									: "AnkiConnect is not running; cards stay queued. Download a standalone deck instead, or install the AnkiConnect add-on (code 2055492159)."}
+						</p>
 					</div>
 				)}
 
@@ -685,6 +902,59 @@ export function LibraryView({ initialGlossary, initialHighlights, initialReading
 									</div>
 									<div className="mt-2 pl-5">
 										<SourceLine source={entry.source} createdAt={entry.createdAt} />
+									</div>
+								</article>
+							))
+						))}
+
+					{tab === "cards" &&
+						(cardRows.length === 0 ? (
+							<p className="py-10 text-center font-serif text-sm text-muted-foreground">
+								{q ? "No cards match that search." : emptyCopy.cards}
+							</p>
+						) : (
+							cardRows.map((entry) => (
+								<article key={entry.id} className="border-b border-border/50 py-4">
+									<div className="flex items-start gap-2">
+										<div className="min-w-0 flex-1">
+											<div className="flex flex-wrap items-center gap-x-2 font-ui text-[10px] uppercase tracking-wider text-muted-foreground">
+												<span>{flashcardKindLabel(entry.kind)}</span>
+												{entry.kind === "translation" && entry.target && (
+													<span>
+														{PRONOUNCE_LANGUAGE_NAMES[entry.language] ?? entry.language} →{" "}
+														{PRONOUNCE_LANGUAGE_NAMES[entry.target] ?? entry.target}
+													</span>
+												)}
+											</div>
+											<p className="mt-1 whitespace-pre-wrap font-serif text-sm">{entry.front}</p>
+											<p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{entry.back}</p>
+											{entry.note && (
+												<p className="mt-1 text-xs text-muted-foreground">{entry.note}</p>
+											)}
+											<div className="mt-2">
+												<SourceLine source={entry.source} createdAt={entry.createdAt} />
+											</div>
+										</div>
+										<div className="flex shrink-0 items-center gap-1">
+											{entry.audio && (
+												<Button
+													size="icon-xs"
+													variant="ghost"
+													aria-label={playingCard === entry.id ? "Stop audio" : "Play audio"}
+													title={playingCard === entry.id ? "Stop audio" : "Play audio"}
+													onClick={() =>
+														playingCard === entry.id ? stopCardAudio() : void playCard(entry)
+													}
+												>
+													{playingCard === entry.id ? <SquareIcon /> : <PlayIcon />}
+												</Button>
+											)}
+											<DeleteControl
+												id={entry.id}
+												label="Delete card"
+												onDelete={() => void removeCard(entry)}
+											/>
+										</div>
 									</div>
 								</article>
 							))

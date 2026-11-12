@@ -38,6 +38,9 @@ import type {
 	ReadingItem,
 	ReadingPatch,
 } from "./library.ts";
+import type { CardStore } from "./cards.ts";
+
+export type { CardStore } from "./cards.ts";
 
 // ─── ChatStore — the session record's home (data/chats) ─────────────────────
 

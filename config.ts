@@ -26,6 +26,8 @@ export const PATHS = {
 	/** Chat sessions (AI SDK UIMessage transcripts, one JSON file per chat). */
 	chats: path.join(DATA_ROOT, "chats"),
 	graph: path.join(DATA_ROOT, "graph"),
+	/** Built .apkg packages and their preview HTML (Anki wave). */
+	anki: path.join(DATA_ROOT, "anki"),
 	/** Debug artifacts (env-gated): data/debug/provider-events/<chatId>.jsonl
 	 * raw provider stream recordings (src/agent/provider-events.ts). */
 	debug: path.join(DATA_ROOT, "debug"),
@@ -125,6 +127,10 @@ export const SETTINGS_FILE = path.join(DATA_ROOT, "settings.json");
 export const GLOSSARY_FILE = path.join(DATA_ROOT, "glossary.jsonl");
 export const HIGHLIGHTS_FILE = path.join(DATA_ROOT, "highlights.jsonl");
 export const READING_LIST_FILE = path.join(DATA_ROOT, "reading.jsonl");
+
+/** Quick-card queue (Anki wave): one JSONL list plus its source-language audio. */
+export const CARDS_FILE = path.join(DATA_ROOT, "cards.jsonl");
+export const CARDS_MEDIA_DIR = path.join(DATA_ROOT, "cards", "media");
 
 /** Edge TTS mp3 cache — derived, deletable, keyed by language+text digest. */
 export const TTS_CACHE_DIR = path.join(DATA_ROOT, "cache", "tts");
