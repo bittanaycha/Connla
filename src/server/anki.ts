@@ -518,8 +518,8 @@ export function writeAnkiExport(deck: AnkiDeck, media: AnkiMediaFile[] = []): An
 		noteCount: built.noteCount,
 		cardCount: built.cardCount,
 		mediaCount: built.mediaNames.length,
-		downloadUrl: `/api/anki/${id}/download`,
-		previewUrl: `/api/anki/${id}/preview`,
+		downloadUrl: `/anki/${id}/download`,
+		previewUrl: `/anki/${id}/preview`,
 	};
 }
 
