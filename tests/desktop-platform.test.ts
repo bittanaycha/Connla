@@ -159,6 +159,13 @@ describe("desktop packaging policy", () => {
 		assert.equal(config.publish[0].releaseType, "draft");
 	});
 
+	it("updates only from Connla's own release feed", () => {
+		assert.equal(config.appId, "com.connla.Connla");
+		assert.equal(config.publish[0].provider, "github");
+		assert.equal(config.publish[0].owner, "bittanaycha");
+		assert.equal(config.publish[0].repo, "Connla");
+	});
+
 	it("deb has public maintainer metadata and a matching desktop identity", () => {
 		const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 		assert.equal(pkg.author.name, "Amos Blomqvist");
