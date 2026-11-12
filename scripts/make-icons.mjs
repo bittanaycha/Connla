@@ -1,6 +1,8 @@
 // Regenerate the Windows/Linux icon set from the flat design source
-// (build/icon-flat.svg — the owner's Affinity export, rounded squircle
-// with baked transparency, owner ruling 2026-10-13).
+// (build/icon-flat.svg — the salmon-and-C pixel mark traced to vector on a
+// rounded squircle with baked transparency; the squircle path is the
+// original Affinity export from the owner ruling 2026-10-13. Rebuild the
+// trace with image-production/working/build_icons.py).
 //
 //   build/icon.ico  — Windows (.ico with 16/24/32/48/64/128/256 PNG entries)
 //   build/icon.png  — Linux (512×512; AppImage/deb/desktop entry)

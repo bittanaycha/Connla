@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/assets/connla-icon.png" width="128" alt="Connla"></p>
+
 <p align="center"><img src="docs/assets/connla-banner.png" alt="Connla — a teacher with a memory."></p>
 
 <p align="center">
