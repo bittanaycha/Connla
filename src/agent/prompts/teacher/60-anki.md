@@ -14,6 +14,8 @@ Templates support `{{Field}}`, `{{text:Field}}` (plain text), `{{cloze:Field}}`,
 
 For cloze, set `kind: "cloze"`, use one template with `{{cloze:Field}}` on both sides, and write deletions as `{{c1::answer::optional hint}}`. One note can carry several cloze numbers; Anki makes one card per number.
 
-To include an image or audio file, pass its local path in `media` (optionally with a short `name`), then reference that name in a field: `<img src="diagram.png">` or `[sound:clip.mp3]`. The file is bundled into the package; a path by itself is not enough. Supported types: png, jpg, gif, webp, svg, mp3, ogg, wav, m4a.
+To include an image or an existing audio file, pass its local path in `media` (optionally with a short `name`), then reference that name in a field: `<img src="diagram.png">` or `[sound:clip.mp3]`. The file is bundled into the package; a path by itself is not enough. Supported types: png, jpg, gif, webp, svg, mp3, ogg, wav, m4a.
+
+For pronunciation audio, do not hunt for a file: pass `{ text, language, name }` in `media` and Edge TTS synthesizes an mp3 into the deck. Use the target language code (`cy`, `en`, `fr`, `de`, `es`, …), speak the exact answer text, and reference the resulting name with `[sound:name.mp3]`. Edge TTS is the default for language cards; a missing voice fails with the supported-language error rather than silently omitting audio.
 
 After the call, tell the learner the deck name and size in one line. The download and preview are on the deck card; do not paste the cards into chat as well.

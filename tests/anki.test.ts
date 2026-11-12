@@ -300,3 +300,46 @@ test("sendQuickCard creates the deck/model, stores audio, and posts one note", a
 		await new Promise<void>((resolve) => server.close(() => resolve()));
 	}
 });
+
+test("export_anki synthesizes Edge TTS media into the package", async () => {
+	const { createAnkiTool } = await import("../src/agent/tools/anki.ts");
+	let spoken: { text: string; language: string } | null = null;
+	let written: { filename: string; mime?: string; data: Uint8Array }[] = [];
+	const tool = createAnkiTool({
+		synthesizeAnkiAudio: async (text, language) => {
+			spoken = { text, language };
+			return { data: new Uint8Array([0xff, 0xf3, 0x64]), mime: "audio/mpeg" };
+		},
+		writeAnkiExport: (deck, media) => {
+			written = media;
+			return {
+				deckName: deck.name,
+				noteType: deck.noteType.name,
+				noteCount: deck.cards.length,
+				cardCount: deck.cards.length,
+				mediaCount: media.length,
+				downloadUrl: "/anki/test/download",
+				previewUrl: "/anki/test/preview",
+			};
+		},
+	});
+	await tool.execute(
+		"anki-tts",
+		{
+			deckName: "Welsh sounds",
+			noteType: {
+				name: "Welsh sound",
+				fields: ["Front", "Audio"],
+				templates: [{ name: "Card 1", front: "{{Front}}", back: "{{FrontSide}}<hr>{{Audio}}" }],
+			},
+			cards: [{ fields: { Front: "bore da", Audio: "[sound:sound.mp3]" } }],
+			media: [{ text: "bore da", language: "cy", name: "sound" }],
+		},
+		undefined,
+	);
+	assert.deepEqual(spoken, { text: "bore da", language: "cy" });
+	assert.equal(written.length, 1);
+	assert.equal(written[0]?.filename, "sound.mp3");
+	assert.equal(written[0]?.mime, "audio/mpeg");
+	assert.equal(written[0]?.data[0], 0xff);
+});

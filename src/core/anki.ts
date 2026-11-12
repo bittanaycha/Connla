@@ -14,6 +14,8 @@
  * of a deck that renders blank in Anki.
  */
 
+import type { PronounceLanguage } from "./pronounce.ts";
+
 /** A deck is a focused study object, not a whole curriculum. */
 export const ANKI_MAX_CARDS = 500;
 export const ANKI_MAX_DECK_CHARS = 80;
@@ -74,6 +76,11 @@ export interface AnkiExportDetails {
 
 /** The composition root injects the writer; the agent layer never imports the server. */
 export type AnkiExportWriter = (deck: AnkiDeck, media: AnkiMediaFile[]) => AnkiExportDetails;
+
+/** The composition root injects Edge TTS; the agent layer never imports the server. */
+export interface AnkiAudioSynthesizer {
+	(text: string, language: PronounceLanguage): Promise<{ data: Uint8Array; mime: string }>;
+}
 
 /** Media is read server-side from the learner's file paths. */
 export interface AnkiMediaFile {

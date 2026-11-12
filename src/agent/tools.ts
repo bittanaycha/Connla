@@ -14,7 +14,7 @@ import {
 } from "../core/question-core.ts";
 import { filterEnabledTools, type EnabledTools } from "../core/pending.ts";
 import type { JobRecord } from "../core/contracts.ts";
-import type { AnkiExportWriter } from "../core/anki.ts";
+import type { AnkiAudioSynthesizer, AnkiExportWriter } from "../core/anki.ts";
 import type { JobStore } from "../core/ports.ts";
 import { jobTools, type DemoInput, type PdfInput, type ResearchInput, type VisualInput } from "./tools/jobs.ts";
 import { planTools, type PlanToolContext } from "./tools/plan.ts";
@@ -415,6 +415,9 @@ export interface TeacherToolContext extends PlanToolContext {
 	/** Anki wave: the composition root injects the .apkg writer; the agent
 	 *  layer never imports the server or node:sqlite. */
 	writeAnkiExport?: AnkiExportWriter;
+	/** Edge TTS seam for synthesized card audio; optional so tests that only
+	 *  exercise file media keep their narrow contexts. */
+	synthesizeAnkiAudio?: AnkiAudioSynthesizer;
 }
 
 /**
