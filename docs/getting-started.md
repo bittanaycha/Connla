@@ -1,6 +1,6 @@
 # Getting started
 
-Download LearnHarness from [learnharness.ai](https://learnharness.ai) or [GitHub Releases](https://github.com/amosblomqvist/learnharness/releases). For running from source, see [Development](development.md).
+Download Connla from [GitHub Releases](https://github.com/bittanaycha/Connla/releases). For running from source, see [Development](development.md).
 
 ## Connect models
 
@@ -9,7 +9,7 @@ Open **Settings → Providers** and configure a connection:
 - **Provider API keys:** use your own account and pay that provider's rates.
 - **Subscription connections:** ChatGPT, GitHub Copilot, and Grok use their respective sign-in flows and account limits. They do not silently fall back to API-key billing.
 - **[Claude Code](claude-code.md):** use a separately installed and authenticated CLI. Its own configuration controls routing and billing; this is not a subscription-only guarantee.
-- **[Custom endpoint](custom-providers.md):** connect one OpenAI-compatible server, including a local model server. LearnHarness does not install or download models.
+- **[Custom endpoint](custom-providers.md):** connect one OpenAI-compatible server, including a local model server. Connla does not install or download models.
 
 Choose **Strong**, **Cheap**, and **Vision** models in Settings. There are no factory model selections. New sessions start with Strong; background roles use their assigned slots or role overrides. A model selected inside an existing session belongs to that session and does not change background-role choices.
 
@@ -68,4 +68,4 @@ API-key files sit beside `data`, not inside it. They are plaintext with restrict
 
 Click the context/cost row beneath the composer for Session stats. Dollar figures estimate known API costs; subscription, CLI, and custom-endpoint usage are not treated as free. See [context, caching, and costs](compaction-accounting.md) for the details.
 
-Packaged apps support updates under **Settings → General**. Development builds do not run the updater. Report problems through [GitHub Issues](https://github.com/amosblomqvist/learnharness/issues), with reproduction steps and the app/OS version rather than private learning records or keys.
+Packaged apps support updates under **Settings → General**. Development builds do not run the updater. Report problems through [Connla Issues](https://github.com/bittanaycha/Connla/issues), with reproduction steps and the app/OS version rather than private learning records or keys.
