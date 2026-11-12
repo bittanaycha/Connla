@@ -18,7 +18,7 @@ Warm paper and sage ink in place of the dark default; a serif for what you read 
 
 Connla also adds:
 
-- **Anki export.** Ask the teacher for a deck during a teaching session. It writes the deck, note type, fields, templates, CSS, cloze cards, tags, and media, then gives you a downloadable `.apkg` with a rendered preview.
+- **Anki export.** Ask the teacher for a deck during a teaching session. It writes the deck, note type, fields, templates, CSS, cloze cards, tags, and media (including Edge TTS audio), then gives you a downloadable `.apkg` with a rendered preview.
 - **Cards from selected text.** Select text in a lesson or question and choose **Create card**. A translation card puts the source text and its pronunciation audio on the front, with the translation on the back. An explanation card puts the selected text on the front, with a model-written explanation on the back.
 - **Direct or queued delivery.** If AnkiConnect is running, choose a deck and send the card straight to Anki. Otherwise it goes to **Library → Cards**, where you can play its audio, send the queue, or export it as a deck.
 - **A saved library.** Glossary entries, highlights, reading items, and queued cards are stored locally and stay linked to the session they came from.
@@ -62,7 +62,7 @@ There are two ways to get material into Anki.
 
 ### Deck authored by the teacher
 
-Ask in a teaching session, for example: “Make me an Anki deck on the causes of the French Revolution” or “Turn these five propositions into cloze cards.” The teacher can choose the deck name, note type, fields, card templates, CSS, tags, and cloze deletions. It can also embed images and audio from local files the session can read.
+Ask in a teaching session, for example: “Make me an Anki deck on the causes of the French Revolution” or “Turn these five propositions into cloze cards.” The teacher can choose the deck name, note type, fields, card templates, CSS, tags, and cloze deletions. It can synthesize pronunciation audio with Edge TTS, or embed images and audio from local files the session can read.
 
 The result is a standalone `.apkg` you can open in Anki, plus a preview that renders the cards with the deck's own CSS. This path does not need AnkiConnect or a running Anki.
 
