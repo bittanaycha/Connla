@@ -301,25 +301,25 @@ test("sendQuickCard creates the deck/model, stores audio, and posts one note", a
 	}
 });
 
-test("export_anki synthesizes Edge TTS media into the package", async () => {
+test("export_anki starts a background job and forwards media requests", async () => {
 	const { createAnkiTool } = await import("../src/agent/tools/anki.ts");
-	let spoken: { text: string; language: string } | null = null;
-	let written: { filename: string; mime?: string; data: Uint8Array }[] = [];
+	const started: { deck?: AnkiDeck; media?: unknown[] } = {};
 	const tool = createAnkiTool({
-		synthesizeAnkiAudio: async (text, language) => {
-			spoken = { text, language };
-			return { data: new Uint8Array([0xff, 0xf3, 0x64]), mime: "audio/mpeg" };
-		},
-		writeAnkiExport: (deck, media) => {
-			written = media;
+		startAnkiExport: (deck, media) => {
+			started.deck = deck;
+			started.media = media;
 			return {
 				deckName: deck.name,
 				noteType: deck.noteType.name,
 				noteCount: deck.cards.length,
 				cardCount: deck.cards.length,
-				mediaCount: media.length,
-				downloadUrl: "/anki/test/download",
-				previewUrl: "/anki/test/preview",
+				mediaCount: 0,
+				state: "running",
+				jobId: "0123456789abcdef",
+				statusUrl: "/anki/0123456789abcdef/status",
+				downloadUrl: "/anki/0123456789abcdef/download",
+				previewUrl: "/anki/0123456789abcdef/preview",
+				warnings: [],
 			};
 		},
 	});
@@ -337,9 +337,47 @@ test("export_anki synthesizes Edge TTS media into the package", async () => {
 		},
 		undefined,
 	);
-	assert.deepEqual(spoken, { text: "bore da", language: "cy" });
-	assert.equal(written.length, 1);
-	assert.equal(written[0]?.filename, "sound.mp3");
-	assert.equal(written[0]?.mime, "audio/mpeg");
-	assert.equal(written[0]?.data[0], 0xff);
+	assert.equal(started.deck?.name, "Welsh sounds");
+	assert.deepEqual(started.media, [{ kind: "speech", text: "bore da", language: "cy", name: "sound" }]);
+});
+
+test("background export finishes and exposes a downloadable package", async () => {
+	const { startAnkiExport, readAnkiJobStatus } = await import("../src/server/anki-job.ts");
+	const details = startAnkiExport(basicDeck, []);
+	assert.equal(details.state, "running");
+	let status = readAnkiJobStatus(details.jobId);
+	for (let attempt = 0; attempt < 100 && status?.state === "running"; attempt++) {
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		status = readAnkiJobStatus(details.jobId);
+	}
+	assert.equal(status?.state, "done");
+	assert.equal(status?.noteCount, 1);
+	assert.equal(status?.cardCount, 1);
+	const { ankiExportDir } = await import("../src/server/anki.ts");
+	const dir = ankiExportDir(details.jobId);
+	assert.ok(dir);
+	assert.ok(fs.existsSync(path.join(dir, "deck.apkg")));
+	assert.match(details.downloadUrl, /^\/anki\/[a-f0-9]{16}\/download$/);
+});
+
+test("a missing media file becomes a warning and the deck still exports", async () => {
+	const { startAnkiExport, readAnkiJobStatus } = await import("../src/server/anki-job.ts");
+	const { ankiExportDir } = await import("../src/server/anki.ts");
+	const deck: AnkiDeck = {
+		...basicDeck,
+		cards: [{ fields: { Front: "bore da", Back: "good morning", Audio: "[sound:gone.mp3]" } }],
+	};
+	const details = startAnkiExport(deck, [{ kind: "file", path: path.join(directory, "missing.mp3"), name: "gone.mp3" }]);
+	let status = readAnkiJobStatus(details.jobId);
+	for (let attempt = 0; attempt < 100 && status?.state === "running"; attempt++) {
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		status = readAnkiJobStatus(details.jobId);
+	}
+	assert.equal(status?.state, "done");
+	assert.equal(status?.mediaCount, 0);
+	assert.equal(status?.warnings.length, 1);
+	const dir = ankiExportDir(details.jobId);
+	assert.ok(dir);
+	const preview = fs.readFileSync(path.join(dir, "preview.html"), "utf-8");
+	assert.doesNotMatch(preview, /\[sound:gone\.mp3\]/);
 });

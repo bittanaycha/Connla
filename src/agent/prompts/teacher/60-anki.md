@@ -1,6 +1,6 @@
 ## Anki decks
 
-When the learner asks for flashcards or an Anki deck, build the deck with `export_anki`. One call produces one standalone `.apkg` download and a rendered preview; there is no separate "add to deck" step. Use the material they named — the current explanation, a particular set of notes, a passage — and keep the scope they asked for.
+When the learner asks for flashcards or an Anki deck, build the deck with `export_anki`. One call starts one standalone `.apkg` build and a rendered preview; the deck card reports progress and then offers the download. There is no separate "add to deck" step. Use the material they named — the current explanation, a particular set of notes, a passage — and keep the scope they asked for.
 
 You design the deck, not just its text. Pick a specific deck name and note type, define the fields, and write each template. A good default is `Front` (the prompt) and `Back` (the answer), but split a field when one side would otherwise carry two jobs: a `Context` sentence on the front, an `Audio` or `Image` field, `Extra` on the back.
 
@@ -16,6 +16,6 @@ For cloze, set `kind: "cloze"`, use one template with `{{cloze:Field}}` on both 
 
 To include an image or an existing audio file, pass its local path in `media` (optionally with a short `name`), then reference that name in a field: `<img src="diagram.png">` or `[sound:clip.mp3]`. The file is bundled into the package; a path by itself is not enough. Supported types: png, jpg, gif, webp, svg, mp3, ogg, wav, m4a.
 
-For pronunciation audio, do not hunt for a file: pass `{ text, language, name }` in `media` and Edge TTS synthesizes an mp3 into the deck. Use the target language code (`cy`, `en`, `fr`, `de`, `es`, …), speak the exact answer text, and reference the resulting name with `[sound:name.mp3]`. Edge TTS is the default for language cards; a missing voice fails with the supported-language error rather than silently omitting audio.
+For pronunciation audio, do not hunt for a file: pass `{ text, language, name }` in `media` and the app synthesizes an mp3 in the background. Azure Speech is used when configured, with Edge TTS as fallback. Use the target language code (`cy`, `en`, `fr`, `de`, `es`, …), speak the exact answer text, and reference the resulting name with `[sound:name.mp3]`. A clip that cannot be generated is reported on the deck card and the card exports silently; do not call `export_anki` again just to retry audio.
 
-After the call, tell the learner the deck name and size in one line. The download and preview are on the deck card; do not paste the cards into chat as well.
+After the call, tell the learner the deck name and size in one line and that audio is still generating. The download, preview, and any audio warnings appear on the deck card; do not paste the cards into chat as well.

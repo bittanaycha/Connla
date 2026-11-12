@@ -18,7 +18,7 @@ Warm paper and sage ink in place of the dark default; a serif for what you read 
 
 Connla also adds:
 
-- **Anki export.** Ask the teacher for a deck during a teaching session. It writes the deck, note type, fields, templates, CSS, cloze cards, tags, and media (including Edge TTS audio), then gives you a downloadable `.apkg` with a rendered preview.
+- **Anki export.** Ask the teacher for a deck during a teaching session. It writes the deck, note type, fields, templates, CSS, cloze cards, tags, and media (including synthesized speech audio), then gives you a downloadable `.apkg` with a rendered preview.
 - **Cards from selected text.** Select text in a lesson or question and choose **Create card**. A translation card puts the source text and its pronunciation audio on the front, with the translation on the back. An explanation card puts the selected text on the front, with a model-written explanation on the back.
 - **Direct or queued delivery.** If AnkiConnect is running, choose a deck and send the card straight to Anki. Otherwise it goes to **Library → Cards**, where you can play its audio, send the queue, or export it as a deck.
 - **A saved library.** Glossary entries, highlights, reading items, and queued cards are stored locally and stay linked to the session they came from.
@@ -62,7 +62,7 @@ There are two ways to get material into Anki.
 
 ### Deck authored by the teacher
 
-Ask in a teaching session, for example: “Make me an Anki deck on the causes of the French Revolution” or “Turn these five propositions into cloze cards.” The teacher can choose the deck name, note type, fields, card templates, CSS, tags, and cloze deletions. It can synthesize pronunciation audio with Edge TTS, or embed images and audio from local files the session can read.
+Ask in a teaching session, for example: “Make me an Anki deck on the causes of the French Revolution” or “Turn these five propositions into cloze cards.” The teacher can choose the deck name, note type, fields, card templates, CSS, tags, and cloze deletions. It can synthesize pronunciation audio with Azure Speech (or Edge TTS when Azure is not configured), or embed images and audio from local files the session can read. Speech is generated in the background, so the deck card shows progress and offers the download when the package is ready; a clip that still cannot be generated exports the card without that clip and records a warning.
 
 The result is a standalone `.apkg` you can open in Anki, plus a preview that renders the cards with the deck's own CSS. This path does not need AnkiConnect or a running Anki.
 
@@ -90,7 +90,7 @@ Connla builds are published on this fork's [GitHub Releases](https://github.com/
 
 Upstream LearnHarness builds ship the upstream skin. To run Connla, use a Connla release or build this checkout.
 
-Choose your models, then start a session with what you want to understand. You can use provider API keys, supported subscription connections in the desktop app, an installed [Claude Code CLI](docs/claude-code.md), or a [custom OpenAI-compatible endpoint](docs/custom-providers.md), including a local model server. Optional dictation, pronunciation audio, and web search use separate services. Web research can use a Tavily, Brave, Exa, Firecrawl, or Ollama key in Settings → Providers → Search. Ollama search uses its hosted service, not a local model server.
+Choose your models, then start a session with what you want to understand. You can use provider API keys, supported subscription connections in the desktop app, an installed [Claude Code CLI](docs/claude-code.md), or a [custom OpenAI-compatible endpoint](docs/custom-providers.md), including a local model server. Optional dictation, pronunciation audio, and web search use separate services. For reliable card audio, add an **Azure Speech** key and region in Settings → Providers → Keys; Azure uses the official neural voices, including Welsh, and falls back to Edge TTS when it is not configured. Web research can use a Tavily, Brave, Exa, Firecrawl, or Ollama key in Settings → Providers → Search. Ollama search uses its hosted service, not a local model server.
 
 See [Getting started](docs/getting-started.md) for model setup, dictation, files, and notes imports, and [context, caching, and costs](docs/compaction-accounting.md) for advanced cache preferences.
 
@@ -98,7 +98,7 @@ See [Getting started](docs/getting-started.md) for model setup, dictation, files
 
 - **Your keys and models.** No subscription or markup. Billing depends on your provider, CLI configuration, subscription, or local setup. The live cost meter estimates known API costs, not subscription, CLI, or custom-endpoint charges.
 - **Local storage.** Your chats, graph, library, cards, settings, and API keys live on your machine. Learning records are plain files you can inspect.
-- **External services.** Models run through your configured providers. Model requests send the context needed for the task; web research, dictation, and pronunciation audio also contact external services. AnkiConnect stays on your machine. Local storage does not mean offline processing.
+- **External services.** Models run through your configured providers. Model requests send the context needed for the task; web research, dictation, and pronunciation audio also contact external services (Azure or Edge for speech). AnkiConnect stays on your machine. Local storage does not mean offline processing.
 - **Inspectable behavior.** System prompts are visible and editable. The app is open source under the AGPL-3.0 license.
 
 ## Development

@@ -33,8 +33,7 @@ import { fileAccessPolicy } from "./file-access.ts";
 import { collectToolCallIds } from "./pi/call-ids.ts";
 import { providerEventNote } from "../agent/provider-events.ts";
 import { effectiveSettings, stores } from "./stores.ts";
-import { writeAnkiExport } from "./anki.ts";
-import { synthesizeEdge } from "./edge-tts.ts";
+import { startAnkiExport } from "./anki-job.ts";
 import { searchAvailable, searchProvider } from "./search.ts";
 import { providerKeyPresent } from "./keys.ts";
 import { CLAUDE_CODE_PROVIDER } from "../core/contracts/claude-code.ts";
@@ -503,13 +502,9 @@ export async function handleChatInput(
 						// Add-only reading list (reading-list wave): the teacher
 						// may write one item, never read the list back.
 						libraryStore: stores.libraryStore,
-						// Anki wave: the .apkg writer stays in the server layer;
-						// the agent only holds the callback.
-						writeAnkiExport,
-						synthesizeAnkiAudio: async (text, language) => {
-							const { audio } = await synthesizeEdge(text, language);
-							return { data: audio, mime: "audio/mpeg" };
-						},
+						// Anki wave: the background export stays in the server
+						// layer; the agent only holds the starter callback.
+						startAnkiExport,
 						spawn: (job, input) => void jobRunner.runJob(job.id, input),
 						// The registry drop's signal (2026-09-20): no live engine
 						// = no research tool in the teacher's registry.

@@ -1,23 +1,17 @@
-import fs from "node:fs";
-import path from "node:path";
 import { Type } from "typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import {
 	ANKI_MAX_CARDS,
 	ANKI_MAX_MEDIA,
-	ANKI_MAX_MEDIA_BYTES,
 	ankiDeckProblems,
 	normalizeAnkiDeck,
-	sanitizeAnkiMediaName,
 	type AnkiDeck,
-	type AnkiAudioSynthesizer,
 	type AnkiExportDetails,
-	type AnkiExportWriter,
-	type AnkiMediaFile,
+	type AnkiExportStarter,
+	type AnkiMediaRequest,
 } from "../../core/anki.ts";
-import { hasEdgeVoice, isPronounceLanguage, PRONOUNCE_LANGUAGES, type PronounceLanguage } from "../../core/pronounce.ts";
+import { isPronounceLanguage, PRONOUNCE_LANGUAGES, type PronounceLanguage } from "../../core/pronounce.ts";
 import { serverExecute } from "../tool-execute.ts";
-import { resolveSourcePath } from "./fs-shared.ts";
 
 /**
  * export_anki (Anki wave): the teacher authors one standalone deck during
@@ -42,18 +36,18 @@ const mediaInput = Type.Union(
 			text: Type.String({
 				minLength: 1,
 				maxLength: 1200,
-				description: "Text to speak with Edge TTS; synthesized to mp3 and bundled",
+				description: "Text to speak; synthesized to mp3 in the background and bundled",
 			}),
 			language: Type.String({
 				minLength: 2,
-				description: "Edge TTS language code, e.g. cy, en, fr, de, es",
+				description: "Speech language code, e.g. cy, en, fr, de, es",
 			}),
 			name: Type.Optional(Type.String({ description: "Optional mp3 file name used inside the deck" })),
 		}),
 	],
 	{
 		description:
-			"Bundle media. Use {path} for an existing learner file, or {text, language} to synthesize speech with Edge TTS.",
+			"Bundle media. Use {path} for an existing learner file, or {text, language} to synthesize speech.",
 	},
 );
 
@@ -97,79 +91,23 @@ const exportAnkiInput = Type.Object({
 	),
 });
 
-const MEDIA_MIME: Record<string, string> = {
-	".png": "image/png",
-	".jpg": "image/jpeg",
-	".jpeg": "image/jpeg",
-	".gif": "image/gif",
-	".webp": "image/webp",
-	".svg": "image/svg+xml",
-	".mp3": "audio/mpeg",
-	".ogg": "audio/ogg",
-	".oga": "audio/ogg",
-	".wav": "audio/wav",
-	".m4a": "audio/mp4",
-};
-
-async function readMedia(
-	items: ({ path: string; name?: string } | { text: string; language: string; name?: string })[] | undefined,
-	synthesize: AnkiAudioSynthesizer | undefined,
-): Promise<AnkiMediaFile[]> {
-	if (!items?.length) return [];
-	const out: AnkiMediaFile[] = [];
-	const used = new Set<string>();
-	const add = (filename: string, data: Uint8Array, mime: string) => {
-		if (used.has(filename)) throw new Error(`Two media files would use the same name: ${filename}`);
-		used.add(filename);
-		out.push({ filename, data, mime });
-	};
-	for (const item of items) {
-		if ("path" in item) {
-			const absolute = resolveSourcePath(item.path);
-			const stat = fs.statSync(/* turbopackIgnore: true */ absolute, { throwIfNoEntry: false });
-			if (!stat?.isFile()) throw new Error(`Media file not found: ${item.path}`);
-			if (stat.size > ANKI_MAX_MEDIA_BYTES) {
-				throw new Error(`Media file is larger than ${Math.round(ANKI_MAX_MEDIA_BYTES / 1024 / 1024)} MB: ${item.path}`);
-			}
-			const ext = path.extname(absolute).toLowerCase();
-			const mime = MEDIA_MIME[ext];
-			if (!mime) {
-				throw new Error(`Unsupported media type “${ext}”. Use png, jpg, gif, webp, svg, mp3, ogg, wav, or m4a.`);
-			}
-			// The source extension is authoritative: Anki's media server uses it
-			// to choose a Content-Type, so a bare `name` must still become
-			// `name.png` rather than an extensionless file.
-			const rawName = item.name?.trim() || path.basename(absolute);
-			const stem = rawName.replace(/\.[^./\\]+$/, "");
-			add(sanitizeAnkiMediaName(`${stem || "media"}${ext}`), fs.readFileSync(/* turbopackIgnore: true */ absolute), mime);
-			continue;
-		}
-		const rawLanguage = item.language.trim().toLowerCase();
-		if (!isPronounceLanguage(rawLanguage) || !hasEdgeVoice(rawLanguage)) {
-			const supported = PRONOUNCE_LANGUAGES.filter((code) => hasEdgeVoice(code)).join(", ");
-			throw new Error(`Edge TTS has no voice for “${item.language}”. Supported: ${supported}.`);
-		}
-		const language: PronounceLanguage = rawLanguage;
-		if (!synthesize) throw new Error("Edge TTS is not available in this session.");
-		const speech = await synthesize(item.text, language);
-		const rawName = item.name?.trim() || `tts-${out.length + 1}.mp3`;
-		const stem = rawName.replace(/\.[^./\\]+$/, "");
-		add(sanitizeAnkiMediaName(`${stem || "tts"}.mp3`), speech.data, speech.mime);
+function toMediaRequest(item: { path: string; name?: string } | { text: string; language: string; name?: string }): AnkiMediaRequest {
+	if ("path" in item) return { kind: "file", path: item.path, name: item.name };
+	const language = item.language.trim().toLowerCase();
+	if (!isPronounceLanguage(language)) {
+		throw new Error(`Unknown speech language “${item.language}”. Supported: ${PRONOUNCE_LANGUAGES.join(", ")}.`);
 	}
-	return out;
+	return { kind: "speech", text: item.text, language: language as PronounceLanguage, name: item.name };
 }
 
-export function createAnkiTool(ctx: {
-	writeAnkiExport?: AnkiExportWriter;
-	synthesizeAnkiAudio?: AnkiAudioSynthesizer;
-}): AgentTool<typeof exportAnkiInput> {
+export function createAnkiTool(ctx: { startAnkiExport?: AnkiExportStarter }): AgentTool<typeof exportAnkiInput> {
 	return {
 		name: "export_anki",
 		label: "export_anki",
 		description:
 			"Author one Anki deck for the learner and deliver a self-contained .apkg download. " +
 			"The deck is yours: name the note type, define its fields and front/back templates, add CSS, use cloze deletions, and bundle images or audio. " +
-			"Audio can come from a local file path or from Edge TTS text; use Edge TTS for pronunciation. " +
+			"Audio can come from a local file path or from speech text; speech uses Azure when configured, with Edge as fallback. Audio generation runs in the background, so the deck card updates when the package is ready. " +
 			"Use it when the learner asks for flashcards or an Anki deck; one call builds one standalone deck. " +
 			"Keep each note atomic (one fact, one production), write in the learner's language, and do not use scripts or remote URLs in cards.",
 		parameters: exportAnkiInput,
@@ -189,11 +127,10 @@ export function createAnkiTool(ctx: {
 			if (problems.length) {
 				throw new Error(`The deck input is invalid. Fix these and retry:\n${problems.map((p) => `- ${p}`).join("\n")}`);
 			}
-			const media = await readMedia(input.media, ctx.synthesizeAnkiAudio);
-			if (!ctx.writeAnkiExport) throw new Error("Anki export is not available in this session.");
-			const details = ctx.writeAnkiExport(normalizeAnkiDeck(deck), media);
+			if (!ctx.startAnkiExport) throw new Error("Anki export is not available in this session.");
+			const details = ctx.startAnkiExport(normalizeAnkiDeck(deck), (input.media ?? []).map(toMediaRequest));
 			return {
-				text: `Built “${details.deckName}” — ${details.noteCount} note${details.noteCount === 1 ? "" : "s"}, ${details.cardCount} card${details.cardCount === 1 ? "" : "s"}${details.mediaCount ? `, ${details.mediaCount} media file${details.mediaCount === 1 ? "" : "s"}` : ""}. The learner can download the .apkg from the deck card.`,
+				text: `Started building “${details.deckName}” with ${details.noteCount} note${details.noteCount === 1 ? "" : "s"} and ${details.cardCount} card${details.cardCount === 1 ? "" : "s"}. Audio is generated in the background; the deck card shows progress and the download appears when the package is ready.`,
 				details,
 			};
 		}),

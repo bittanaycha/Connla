@@ -15,7 +15,16 @@ describe("the catalog", () => {
 	it("lists the curated app-service keys (provider keys live in the provider table)", () => {
 		assert.deepEqual(
 			AUTH_KEYS.map((k) => k.id),
-			["DEEPGRAM_API_KEY", "TAVILY_API_KEY", "BRAVE_API_KEY", "EXA_API_KEY", "FIRECRAWL_API_KEY", "OLLAMA_API_KEY"],
+			[
+				"DEEPGRAM_API_KEY",
+				"TAVILY_API_KEY",
+				"BRAVE_API_KEY",
+				"EXA_API_KEY",
+				"FIRECRAWL_API_KEY",
+				"OLLAMA_API_KEY",
+				"AZURE_SPEECH_KEY",
+				"AZURE_SPEECH_REGION",
+			],
 		);
 		for (const k of AUTH_KEYS) {
 			assert.ok(k.label.length > 0, `${k.id} has a label`);
@@ -37,6 +46,8 @@ describe("the catalog", () => {
 		assert.ok(isKnownAuthKey("EXA_API_KEY"));
 		assert.ok(isKnownAuthKey("FIRECRAWL_API_KEY"));
 		assert.ok(isKnownAuthKey("OLLAMA_API_KEY"));
+		assert.ok(isKnownAuthKey("AZURE_SPEECH_KEY"));
+		assert.ok(isKnownAuthKey("AZURE_SPEECH_REGION"));
 		assert.ok(!isKnownAuthKey("OPENROUTER_API_KEY"));
 		assert.ok(!isKnownAuthKey("OPENAI_API_KEY"), "provider vars are a separate surface");
 		assert.ok(!isKnownAuthKey("FUTURE_PLANS_TOKEN"));

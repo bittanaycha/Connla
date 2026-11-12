@@ -66,6 +66,18 @@ export const AUTH_KEYS: readonly AuthKeyInfo[] = [
 		description: "Hosted web search at ollama.com — requires an Ollama API key. Setting it activates search, not local models.",
 		docsUrl: "https://ollama.com/settings/keys",
 	},
+	{
+		id: "AZURE_SPEECH_KEY",
+		label: "Azure Speech",
+		description: "Text-to-speech for Anki cards and pronunciation. The official neural voices include Welsh; setting the key and region activates Azure, with Edge as fallback.",
+		docsUrl: "https://portal.azure.com/#view/Microsoft_Azure_ProjectOxford/CognitiveServicesHub/~/SpeechServices",
+	},
+	{
+		id: "AZURE_SPEECH_REGION",
+		label: "Azure Speech region",
+		description: "The speech resource's lowercase region code, e.g. westeurope. Not secret; stored beside the key so the app can build the endpoint.",
+		docsUrl: "https://learn.microsoft.com/azure/ai-services/speech-service/regions",
+	},
 ] as const;
 
 const AUTH_KEY_IDS: ReadonlySet<string> = new Set(AUTH_KEYS.map((k) => k.id));
@@ -203,6 +215,13 @@ export function validateKeyShape(id: string, rawValue: string): KeyShapeResult {
 		case "DEEPGRAM_API_KEY":
 			// No public format — the length floor only catches truncated pastes.
 			return nonEmpty(20);
+		case "AZURE_SPEECH_KEY":
+			// Azure keys are opaque; same paste-hygiene floor.
+			return nonEmpty(20);
+		case "AZURE_SPEECH_REGION":
+			return /^[a-z0-9-]{2,32}$/.test(value)
+				? { ok: true as const }
+				: { ok: false as const, error: `${id} must be a lowercase Azure region code (e.g. westeurope)` };
 		default:
 			return { ok: false, error: `unknown key "${id}" (supported: ${[...AUTH_KEY_IDS].join(", ")})` };
 	}

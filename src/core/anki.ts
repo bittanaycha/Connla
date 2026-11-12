@@ -63,6 +63,8 @@ export interface AnkiDeck {
 	cards: AnkiCard[];
 }
 
+export type AnkiExportState = "running" | "done" | "error";
+
 /** What the export tool writes into the session record (and the artifact card renders). */
 export interface AnkiExportDetails {
 	deckName: string;
@@ -72,15 +74,43 @@ export interface AnkiExportDetails {
 	mediaCount: number;
 	downloadUrl: string;
 	previewUrl: string;
+	/** Background export: "running" until the audio job finishes. */
+	state: AnkiExportState;
+	jobId: string;
+	statusUrl: string;
+	/** Clips that could not be synthesized; the cards still export silently. */
+	warnings: string[];
+	error?: string;
 }
+
+/** Progress written by the background export job and read by the deck card. */
+export interface AnkiJobStatus {
+	state: AnkiExportState;
+	deckName: string;
+	noteCount: number;
+	cardCount: number;
+	mediaTotal: number;
+	mediaCompleted: number;
+	mediaCount: number;
+	current?: string;
+	warnings: string[];
+	error?: string;
+	updatedAt: number;
+	downloadUrl: string;
+	previewUrl: string;
+	statusUrl: string;
+}
+
+/** One requested media item; files are read server-side and speech is synthesized. */
+export type AnkiMediaRequest =
+	| { kind: "file"; path: string; name?: string }
+	| { kind: "speech"; text: string; language: PronounceLanguage; name?: string };
 
 /** The composition root injects the writer; the agent layer never imports the server. */
-export type AnkiExportWriter = (deck: AnkiDeck, media: AnkiMediaFile[]) => AnkiExportDetails;
+export type AnkiExportWriter = (deck: AnkiDeck, media: AnkiMediaFile[], options?: { id?: string; warnings?: string[] }) => AnkiExportDetails;
 
-/** The composition root injects Edge TTS; the agent layer never imports the server. */
-export interface AnkiAudioSynthesizer {
-	(text: string, language: PronounceLanguage): Promise<{ data: Uint8Array; mime: string }>;
-}
+/** The composition root starts the background export; the agent only holds the callback. */
+export type AnkiExportStarter = (deck: AnkiDeck, media: AnkiMediaRequest[]) => AnkiExportDetails;
 
 /** Media is read server-side from the learner's file paths. */
 export interface AnkiMediaFile {
@@ -327,6 +357,14 @@ export function normalizeAnkiDeck(deck: AnkiDeck): AnkiDeck {
 			};
 		}),
 	};
+}
+
+/** How many Anki cards the deck generates (basic: notes × templates; cloze: one per cloze number). */
+export function ankiCardCount(deck: AnkiDeck): number {
+	if (deck.noteType.kind === "cloze") {
+		return deck.cards.reduce((sum, card) => sum + parseAnkiClozeOrds(card).length, 0);
+	}
+	return deck.cards.length * deck.noteType.templates.length;
 }
 
 /** The card ordinals a cloze note generates: {{c1::…}} → 0, {{c2::…}} → 1. */

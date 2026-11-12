@@ -1,7 +1,7 @@
 /**
  * Quick-card services (Anki wave): the queue operations behind the popup
  * and the Library → Cards tab. The popup creates a card (with source-side
- * audio when that language has an Edge voice), then either sends it to a
+ * audio when that language has a mapped voice), then either sends it to a
  * running Anki through AnkiConnect or leaves it queued.
  */
 
@@ -17,7 +17,7 @@ import {
 	type NewFlashcard,
 } from "../core/cards.ts";
 import { hasEdgeVoice } from "../core/pronounce.ts";
-import { synthesizeEdge } from "./edge-tts.ts";
+import { synthesizeSpeech } from "./tts.ts";
 import { sendQuickCard, AnkiConnectError, quickCardNoteType } from "./anki-connect.ts";
 import { writeAnkiExport } from "./anki.ts";
 import { stores } from "./stores.ts";
@@ -52,7 +52,7 @@ export async function createQuickCard(input: Omit<NewFlashcard, "audio">): Promi
 			warning = "The selected text is too long for audio; the card was saved without a clip.";
 		} else {
 			try {
-				const synthesized = await synthesizeEdge(clean.front, clean.language);
+				const synthesized = await synthesizeSpeech(clean.front, clean.language);
 				audio = { text: clean.front, language: clean.language, data: synthesized.audio };
 			} catch {
 				warning = "The audio could not be generated; the card was saved without a clip.";

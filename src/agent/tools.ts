@@ -14,7 +14,7 @@ import {
 } from "../core/question-core.ts";
 import { filterEnabledTools, type EnabledTools } from "../core/pending.ts";
 import type { JobRecord } from "../core/contracts.ts";
-import type { AnkiAudioSynthesizer, AnkiExportWriter } from "../core/anki.ts";
+import type { AnkiExportStarter } from "../core/anki.ts";
 import type { JobStore } from "../core/ports.ts";
 import { jobTools, type DemoInput, type PdfInput, type ResearchInput, type VisualInput } from "./tools/jobs.ts";
 import { planTools, type PlanToolContext } from "./tools/plan.ts";
@@ -412,12 +412,9 @@ export interface TeacherToolContext extends PlanToolContext {
 	 *  Optional so the many existing test contexts keep their narrow shapes;
 	 *  the production composition root always passes it. */
 	libraryStore?: Pick<LibraryStore, "listReading" | "addReading">;
-	/** Anki wave: the composition root injects the .apkg writer; the agent
+	/** Anki wave: the composition root starts the background export; the agent
 	 *  layer never imports the server or node:sqlite. */
-	writeAnkiExport?: AnkiExportWriter;
-	/** Edge TTS seam for synthesized card audio; optional so tests that only
-	 *  exercise file media keep their narrow contexts. */
-	synthesizeAnkiAudio?: AnkiAudioSynthesizer;
+	startAnkiExport?: AnkiExportStarter;
 }
 
 /**
@@ -489,7 +486,7 @@ export function createTeacherTools(
 			// standalone .apkg per command; media comes from learner files.
 			// The production composition root injects the writer; test
 			// contexts without it keep their narrow registry.
-			...(ctx.writeAnkiExport ? { export_anki: createAnkiTool(ctx) } : {}),
+			...(ctx.startAnkiExport ? { export_anki: createAnkiTool(ctx) } : {}),
 			...planTools(ctx),
 			...jobTools({ chatId: ctx.chatId, jobStore: ctx.jobStore, spawn: ctx.spawn, searchAvailable: ctx.searchAvailable }),
 		},

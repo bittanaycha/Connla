@@ -1,5 +1,5 @@
 import { isPronounceLanguage } from "@/src/core";
-import { edgeVoiceFor, synthesizeEdge } from "@/src/server";
+import { edgeVoiceFor, synthesizeSpeech } from "@/src/server";
 
 /** A spoken selection is a word or a sentence, not a chapter. */
 const MAX_TTS_CHARS = 1200;
@@ -7,10 +7,9 @@ const MAX_TTS_CHARS = 1200;
 /**
  * GET /api/tts?lang=fr&text=bonjour
  *
- * The free default voice (Edge Read Aloud). 200 = audio/mpeg; 422 =
- * the language has no Edge voice (Scottish Gaelic today); 502 = Edge
- * refused or the network failed. The client falls back to the OS voice,
- * then to the Forvo window.
+ * Azure Speech when configured, Edge Read Aloud otherwise. 200 = audio/mpeg;
+ * 422 = the language has no mapped voice (Scottish Gaelic today); 502 = the
+ * provider chain failed. The client falls back to the OS voice, then Forvo.
  */
 export async function GET(request: Request) {
 	const url = new URL(request.url);
@@ -37,7 +36,7 @@ export async function GET(request: Request) {
 	}
 
 	try {
-		const { audio } = await synthesizeEdge(text, language);
+		const { audio } = await synthesizeSpeech(text, language);
 		return new Response(new Uint8Array(audio), {
 			headers: {
 				"Content-Type": "audio/mpeg",
@@ -46,7 +45,7 @@ export async function GET(request: Request) {
 			},
 		});
 	} catch (error) {
-		console.error("[tts] edge synthesis failed:", error instanceof Error ? error.message : error);
+		console.error("[tts] synthesis failed:", error instanceof Error ? error.message : error);
 		return Response.json({ error: "Speech is unavailable.", code: "tts_failed" }, { status: 502 });
 	}
 }

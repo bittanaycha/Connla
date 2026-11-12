@@ -498,9 +498,14 @@ function mediaMime(name: string): string {
 }
 
 /** Write a self-contained deck plus its preview and return the artifact details. */
-export function writeAnkiExport(deck: AnkiDeck, media: AnkiMediaFile[] = []): AnkiExportDetails {
-	const id = crypto.randomBytes(8).toString("hex");
-	const dir = path.join(PATHS.anki, id);
+export function writeAnkiExport(
+	deck: AnkiDeck,
+	media: AnkiMediaFile[] = [],
+	options: { id?: string; warnings?: string[] } = {},
+): AnkiExportDetails {
+	const id = options.id ?? crypto.randomBytes(8).toString("hex");
+	const dir = ankiExportDir(id);
+	if (!dir) throw new Error("Invalid Anki export id.");
 	fs.mkdirSync(dir, { recursive: true });
 	const built = buildAnkiPackage(deck, media);
 	fs.writeFileSync(path.join(dir, "deck.apkg"), built.data);
@@ -518,8 +523,12 @@ export function writeAnkiExport(deck: AnkiDeck, media: AnkiMediaFile[] = []): An
 		noteCount: built.noteCount,
 		cardCount: built.cardCount,
 		mediaCount: built.mediaNames.length,
+		state: "done",
+		jobId: id,
+		statusUrl: `/anki/${id}/status`,
 		downloadUrl: `/anki/${id}/download`,
 		previewUrl: `/anki/${id}/preview`,
+		warnings: options.warnings ?? [],
 	};
 }
 
