@@ -8,6 +8,10 @@ import type { AnkiExportDetails, ArtifactPartProps } from "@/src/core";
  * download card plus the sandboxed preview of every card. The preview is a
  * separate same-origin document, so the deck CSS cannot leak into the app.
  */
+function browserUrl(url: string): string {
+	return url.startsWith("/api/anki/") ? url.replace(/^\/api\/anki\//, "/anki/") : url;
+}
+
 export function AnkiCard({ part }: ArtifactPartProps) {
 	if (part.state !== "output-available") return null;
 	const details = part.output as Partial<AnkiExportDetails> | undefined;
@@ -23,6 +27,8 @@ export function AnkiCard({ part }: ArtifactPartProps) {
 			</div>
 		);
 	}
+	const downloadUrl = browserUrl(details.downloadUrl);
+	const previewUrl = browserUrl(details.previewUrl);
 	const noteCount = typeof details.noteCount === "number" ? details.noteCount : 0;
 	const cardCount = typeof details.cardCount === "number" ? details.cardCount : 0;
 	const mediaCount = typeof details.mediaCount === "number" ? details.mediaCount : 0;
@@ -41,7 +47,7 @@ export function AnkiCard({ part }: ArtifactPartProps) {
 					</div>
 				</div>
 				<a
-					href={details.downloadUrl}
+					href={downloadUrl}
 					className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
 					data-testid="anki-download"
 				>
@@ -49,7 +55,7 @@ export function AnkiCard({ part }: ArtifactPartProps) {
 					Download .apkg
 				</a>
 				<a
-					href={details.previewUrl}
+					href={previewUrl}
 					target="_blank"
 					rel="noreferrer"
 					className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
@@ -59,7 +65,7 @@ export function AnkiCard({ part }: ArtifactPartProps) {
 				</a>
 			</div>
 			<iframe
-				src={details.previewUrl}
+				src={previewUrl}
 				title={`${details.deckName} preview`}
 				sandbox=""
 				className="h-[420px] w-full bg-white"
