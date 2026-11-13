@@ -57,6 +57,10 @@ const nextConfig: NextConfig = {
 			"github-copilot-credentials.json*",
 			"xai-credentials.json*",
 			".env*",
+			// Source art and icon build scripts are design inputs, not payload.
+			// The dynamic-access trace sweeps the repo root and dragged the
+			// JPEG into standalone/, where codesign refused it (2026-11-12).
+			"image-production/**/*",
 		],
 	},
 	// Empirically verified gaps (2026-09-17 standalone smoke): the tracer

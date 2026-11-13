@@ -42,6 +42,58 @@ The release workflow also checks providers from the **packaged** payload under h
 
 `npm run desktop:dist` is the local **signed macOS** path using the `LH_NOTARY` keychain profile and Xcode `DEVELOPER_DIR`. It clears `dist` and `.next/standalone`, builds, checks the fresh provider trace, curates, runs the server smoke under **host Node**, and packages. It does not itself run the Electron-Node/post-package gates or the tag-upload workflow.
 
+### Building and installing without Xcode or notary credentials
+
+`npm run desktop:dist` assumes Xcode 26 (`actool`, for `build/icon.icon`) and the
+`LH_NOTARY` keychain profile. On a machine with neither, run the same chain by
+hand and override the two steps that need them:
+
+```sh
+export PATH="$HOME/.nvm/versions/node/v24.20.0/bin:$PATH"   # a real Node, not Electron's
+npx next build
+node scripts/smoke-provider-runtime.mjs
+node scripts/build-server.mjs
+node scripts/smoke-server.mjs
+npx electron-builder --mac --arm64 \
+  -c.mac.icon=build/icon.icns \
+  -c.mac.notarize=false
+ditto dist/mac-arm64/Connla.app /Applications/Connla.app
+env -u ELECTRON_RUN_AS_NODE open -a /Applications/Connla.app
+```
+
+Four traps, each with a misleading failure mode (all hit 2026-11-12):
+
+1. **Electron's Node is not a Node.** An Electron-based environment exports
+   `ELECTRON_RUN_AS_NODE=1` and puts Electron's helper on PATH as `node`
+   (v24.17.0, "…Helper"). `smoke-server.mjs` strips that variable from the
+   child on purpose, so the child re-boots as a GUI Electron and dies with
+   `Unable to find helper app` / `Another instance is already running`. Put a
+   real Node first on PATH for the whole chain. The same variable makes a
+   launched app exit silently (code 0, no output): unset it with
+   `env -u ELECTRON_RUN_AS_NODE`.
+2. **A running copy blocks the build.** The smoke spawns a second instance;
+   quit `/Applications/Connla.app` first.
+3. **No `actool`.** `mac.icon: build/icon.icon` fails with "Failed to check
+   actool version. Is Xcode 26 or higher installed?". Override to the icns;
+   `after-pack.cjs` then copies the full-resolution `build/icon.icns` into the
+   bundle, which is what the Dock shows when no `Assets.car` was compiled.
+4. **Project-root files get traced.** The dynamic-filesystem warning in
+   `src/agent/subagents/headless.ts` makes the tracer sweep the repo root, so
+   `image-production/originals/*.jpg` landed in `standalone/` and codesign
+   refused it with "Permission denied". Keep such directories in
+   `outputFileTracingExcludes`.
+
+`-c.mac.notarize=false` with an Apple Development identity produces a valid
+signature that Gatekeeper rejects (`spctl`: `rejected … origin=Apple
+Development`). The app still launches locally because a `ditto` copy carries no
+quarantine attribute. It is not distributable.
+
+Verify the installed icon by hash rather than by eye:
+
+```sh
+shasum -a 256 build/icon.icns /Applications/Connla.app/Contents/Resources/icon.icns
+```
+
 For Windows/Linux, perform steps 1–6 on that OS, then:
 
 ```sh
